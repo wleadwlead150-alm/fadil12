@@ -136,7 +136,6 @@ const QuizResult = mongoose.model('QuizResult', quizResultSchema);
 const Quiz = mongoose.model('Quiz', quizSchema);
 const Analysis = mongoose.model('Analysis', analysisSchema);
 
-// The answer keys stay on the server so the student browser never calculates its own score.
 const QUIZZES = {
   basics: { title: 'اختبار أساسيات التداول', answers: [1, 0, 2] },
   risk: { title: 'اختبار إدارة رأس المال', answers: [0, 2, 1] },
@@ -292,7 +291,6 @@ async function submitQuiz(req, res, next) {
   } catch (error) { next(error); }
 }
 
-// Keep the former dynamic route for existing clients, while the fixed endpoint is used by the current interface.
 app.post('/api/quizzes/submit', databaseRequired, requireAuth, submitQuiz);
 app.post('/api/quizzes/:moduleId/submit', databaseRequired, requireAuth, submitQuiz);
 
@@ -564,8 +562,8 @@ app.get('/api/admin/student-performance', databaseRequired, requireAuth, require
   try {
     const [students, lessonCounts, progressCounts] = await Promise.all([
       User.find({ role: 'student' }).populate('currentCourseId', 'title').select('name email isSubscribed activatedAt currentCourseId createdAt').sort({ createdAt: -1 }),
-      Lesson.aggregate([{ $match: { isPublished: true } }, { $group: { _id: '$courseId', totalLessons: { $sum: 1 } } }]),
-      Progress.aggregate([{ $group: { _id: { userId: '$userId', courseId: '$courseId' }, watched: { $sum: 1 }, completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } } } }]),
+      Lesson.aggregate([{ $match: { isPublished: true } }, {$group: { _id: '$courseId', totalLessons: {$sum: 1 } } }]),
+      Progress.aggregate([{ $group: { _id: { userId: '$userId', courseId: '$courseId' }, watched: {$sum: 1 }, completed: { $sum: {$cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } } } }]),
     ]);
     const totalByCourse = new Map(lessonCounts.map(item => [String(item._id), item.totalLessons]));
     const progressByStudent = new Map(progressCounts.map(item => [`${item._id.userId}:${item._id.courseId || ''}`, item]));
@@ -593,12 +591,21 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: err.message || 'حدث خطأ غير متوقع.' });
 });
 
-if (MONGO_URI) {
-  mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 5000 })
-    .then(async () => { console.log('✓ MongoDB connected'); await seedDefaultAdmin(); })
-    .catch((error) => console.warn(`⚠ MongoDB unavailable: ${error.message}`));
-} else {
-  console.warn('⚠ MONGO_URI is not set. The interface will run, but database features require configuration.');
+// [التعديل هنا لجعل السيرفر ينتظر اتصال القاعدة أولاً وتفادي مشاكل التأخير في Render]
+async function startServer() {
+  try {
+    if (MONGO_URI) {
+      await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 30000 });
+      console.log('✓ MongoDB connected');
+      await seedDefaultAdmin();
+    } else {
+      console.warn('⚠ MONGO_URI is not set. The interface will run, but database features require configuration.');
+    }
+  } catch (error) {
+    console.warn(`⚠ MongoDB connection error: ${error.message}`);
+  }
+
+  app.listen(PORT, () => console.log(`✓ FADIL TRADING is running at http://localhost:${PORT}`));
 }
 
-app.listen(PORT, () => console.log(`✓ FADIL TRADING is running at http://localhost:${PORT}`));
+startServer();
