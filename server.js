@@ -89,9 +89,22 @@ async function seedDefaultAdmin() {
   } else if (res.rows[0].role !== 'admin') { await query(`UPDATE users SET role = 'admin', is_subscribed = TRUE WHERE email = $1`, [ADMIN_EMAIL]); }
 }
 
-async function ensureFreeCourse() {
-  const res = await query('SELECT * FROM courses WHERE is_free = TRUE LIMIT 1');
-  if (res.rows.length === 0) { await query(`INSERT INTO courses (title, description, category, is_published, is_free) VALUES ($1, $2, $3, $4, $5)`, ['كورس مجاني', 'مدخل مجاني لتعلّم أساسيات التداول وإدارة المخاطر.', 'general', true, true]); }
+// دالة لإضافه الكورسات الافتراضية تلقائياً لقاعدة البيانات لتظهر في القائمة
+async function seedDefaultCourses() {
+  const defaultCourses = [
+    { title: 'كورس مجاني', desc: 'مدخل مجاني لتعلّم أساسيات التداول وإدارة المخاطر.', cat: 'general', free: true },
+    { title: 'مفاهيم SMC / ICT', desc: 'السيولة، الـ Order Blocks، وبناء فكرة التداول.', cat: 'المسار المتقدم', free: false },
+    { title: 'مفاهيم Harmonic', desc: 'قراءة النماذج السعرية وتحديد مناطق الانعكاس.', cat: 'تحليل فني', free: false },
+    { title: 'الأساسيات', desc: 'لغة السوق، الشموع، وأنواع الأوامر.', cat: 'البداية الصحيحة', free: false },
+    { title: 'إدارة رأس المال', desc: 'المخاطر، حجم العقد، وخطة الاستمرارية.', cat: 'حماية الحساب', free: false },
+    { title: 'الملازم والكتب', desc: 'مراجع عملية قابلة للعودة إليها في كل مرحلة.', cat: 'مكتبة المتداول', free: false }
+  ];
+  for (let c of defaultCourses) {
+    const check = await query('SELECT id FROM courses WHERE title = $1', [c.title]);
+    if (check.rows.length === 0) {
+      await query(`INSERT INTO courses (title, description, category, is_published, is_free) VALUES ($1, $2, $3, TRUE, $4)`, [c.title, c.desc, c.cat, c.free]);
+    }
+  }
 }
 
 async function requireAuth(req, res, next) {
@@ -345,7 +358,7 @@ app.delete('/api/admin/quiz-files/:id', requireAuth, requireAdmin, async (req, r
   } catch (error) { next(error); }
 });
 
-// نتائج الطلاب (الجديدة)
+// نتائج الطلاب
 app.post('/api/admin/result-files', requireAuth, requireAdmin, contentUpload.single('file'), async (req, res, next) => {
   try {
     if (!req.file || !req.body.title?.trim()) return res.status(400).json({ error: 'اختر ملفاً وأدخل العنوان.' });
@@ -413,7 +426,7 @@ async function startServer() {
   try {
     await initDatabase();
     await seedDefaultAdmin();
-    await ensureFreeCourse();
+    await seedDefaultCourses(); // تشغيل دالة إدراج الكورسات تلقائياً
     console.log('✓ PostgreSQL connected and all tables initialized successfully');
     app.listen(PORT, () => console.log(`✓ FADIL TRADING is running at http://localhost:${PORT}`));
   } catch (err) { console.error('Database Initialization Error:', err); }
