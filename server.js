@@ -44,7 +44,7 @@ const courseSchema = new mongoose.Schema({
   thumbnailPath: { type: String, default: '' },
   attachmentPath: { type: String, default: '' },
   isPublished: { type: Boolean, default: true },
-  isFree: { type: Boolean, default: false }, // الكورس المجاني
+  isFree: { type: Boolean, default: false },
 }, { timestamps: true });
 
 const lessonSchema = new mongoose.Schema({
@@ -69,7 +69,6 @@ const resourceSchema = new mongoose.Schema({
   size: { type: Number, default: 0 },
 }, { timestamps: true });
 
-// Schema الخاص بنظام الاختبارات (رفع ملفات فقط)
 const quizFileSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true, maxlength: 160 },
   filePath: { type: String, required: true },
@@ -123,7 +122,7 @@ const User = mongoose.model('User', userSchema);
 const Course = mongoose.model('Course', courseSchema);
 const Lesson = mongoose.model('Lesson', lessonSchema);
 const Resource = mongoose.model('Resource', resourceSchema);
-const QuizFile = mongoose.model('QuizFile', quizFileSchema); // الموديل الجديد لملفات الاختبار
+const QuizFile = mongoose.model('QuizFile', quizFileSchema);
 const Progress = mongoose.model('Progress', progressSchema);
 const Subscription = mongoose.model('Subscription', subscriptionSchema);
 const Message = mongoose.model('Message', messageSchema);
@@ -221,9 +220,16 @@ async function ensureFreeCourse() {
 // ----------------------------------------------------
 // Middlewares
 // ----------------------------------------------------
-function databaseRequired(_req, res, next) {
+// التعديل 1: السماح بالانتظار أو محاولة الاتصال إذا تأخرت الاستجابة
+async function databaseRequired(_req, res, next) {
   if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({ error: 'قاعدة البيانات غير متصلة. يرجى الانتظار قليلاً.' });
+    // محاولة اتصال سريعة أخيرة قبل الرفض
+    try {
+      const safeMongoUri = process.env.MONGO_URI || "mongodb+srv://wleadwlead150_db_user:j3U18ZpQG8EYOWdo@fadil.wc6wbvu.mongodb.net/?appName=Fadil";
+      await mongoose.connect(safeMongoUri, { serverSelectionTimeoutMS: 5000 });
+    } catch (e) {
+      return res.status(503).json({ error: 'قاعدة البيانات غير متصلة. يرجى الانتظار قليلاً أو تحديث الصفحة.' });
+    }
   }
   next();
 }
@@ -249,7 +255,6 @@ function requireAdmin(req, res, next) {
 // ----------------------------------------------------
 app.get('/api/health', (_req, res) => res.json({ ok: true, database: mongoose.connection.readyState === 1 ? 'connected' : 'not-configured' }));
 
-// Auth
 app.post('/api/auth/register', databaseRequired, async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
@@ -289,7 +294,6 @@ app.post('/api/auth/logout', databaseRequired, requireAuth, async (req, res, nex
 
 app.get('/api/user-status', databaseRequired, requireAuth, (req, res) => res.json({ user: publicUser(req.user) }));
 
-// Public Data
 app.get('/api/news', databaseRequired, async (_req, res, next) => {
   try { res.json(await News.find({ isPublished: true }).sort({ createdAt: -1 }).limit(12)); } catch (error) { next(error); }
 });
@@ -298,10 +302,8 @@ app.get('/api/analyses', databaseRequired, async (_req, res, next) => {
   try { res.json(await Analysis.find({ isPublished: true }).sort({ createdAt: -1 }).limit(12)); } catch (error) { next(error); }
 });
 
-// Quiz Files for Students (عرض وتحميل الاختبارات كملفات)
 app.get('/api/quiz-files', databaseRequired, requireAuth, async (req, res, next) => {
   try {
-    // متاح للأدمن أو للطلاب المشتركين
     if (!req.user.isSubscribed && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'الاختبارات متاحة للعضوية النشطة فقط.' });
     }
@@ -310,7 +312,6 @@ app.get('/api/quiz-files', databaseRequired, requireAuth, async (req, res, next)
   } catch (error) { next(error); }
 });
 
-// Courses & Lessons
 app.get('/api/courses', databaseRequired, requireAuth, async (req, res, next) => {
   try { res.json(await Course.find({ isPublished: true }).sort({ createdAt: -1 })); } catch (error) { next(error); }
 });
@@ -369,7 +370,6 @@ app.post('/api/lessons/:id/progress', databaseRequired, requireAuth, async (req,
   } catch (error) { next(error); }
 });
 
-// Subscriptions & Tickets
 app.post('/api/subscriptions', databaseRequired, requireAuth, paymentUpload.single('paymentProof'), async (req, res, next) => {
   try {
     const subscription = await Subscription.create({
@@ -400,9 +400,6 @@ app.get('/api/support/messages', databaseRequired, requireAuth, async (req, res,
   } catch (error) { next(error); }
 });
 
-// ----------------------------------------------------
-// Admin Routes
-// ----------------------------------------------------
 app.get('/api/admin/tickets', databaseRequired, requireAuth, requireAdmin, async (_req, res, next) => {
   try {
     const messages = await Message.find().sort({ createdAt: -1 }).populate('userId', 'name email');
@@ -528,7 +525,6 @@ app.delete('/api/admin/resources/:id', databaseRequired, requireAuth, requireAdm
   } catch (error) { next(error); }
 });
 
-// Admin Quiz Files Upload (رفع وحذف ملفات الاختبارات من لوحة التحكم)
 app.post('/api/admin/quiz-files', databaseRequired, requireAuth, requireAdmin, contentUpload.single('file'), async (req, res, next) => {
   try {
     if (!req.file || !req.body.title?.trim()) return res.status(400).json({ error: 'اختر ملفاً وأدخل عنوان الاختبار.' });
@@ -616,10 +612,11 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: err.message || 'حدث خطأ غير متوقع.' });
 });
 
-// الاتصال المباشر والآمن بقاعدة البيانات (لا يسبب Crash)
+// التعديل 2: الاتصال الآمن واستخدام process.env لمنع Railway من التأخير
 async function startServer() {
   try {
-    const safeMongoUri = "mongodb+srv://wleadwlead150_db_user:j3U18ZpQG8EYOWdo@fadil.wc6wbvu.mongodb.net/?appName=Fadil";
+    // الأولوية دائماً لـ process.env ثم الرابط المباشر
+    const safeMongoUri = process.env.MONGO_URI || "mongodb+srv://wleadwlead150_db_user:j3U18ZpQG8EYOWdo@fadil.wc6wbvu.mongodb.net/?appName=Fadil";
     
     mongoose.connect(safeMongoUri, { serverSelectionTimeoutMS: 30000 })
       .then(async () => {
