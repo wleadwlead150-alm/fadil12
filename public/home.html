@@ -5,12 +5,16 @@
   <meta name="theme-color" content="#050505"><title>FADIL TRADING | منصة التداول</title>
   <link rel="stylesheet" href="/style.css">
   <style>
-    /* تحسينات الدردشة */
+    /* تحسينات الدردشة وضمان ظهور النوافذ المنبثقة */
     .chat-log { display: flex; flex-direction: column; gap: 10px; padding: 15px; }
     .bubble { padding: 10px 15px; max-width: 75%; position: relative; font-size: 0.95rem; }
     .bubble time { display: block; font-size: 0.75rem; opacity: 0.8; margin-top: 5px; }
     .bubble.admin { background-color: #007bff !important; align-self: flex-start !important; color: white !important; border-radius: 15px 15px 15px 0 !important; border: none; }
     .bubble.student { background-color: #28a745 !important; align-self: flex-end !important; color: white !important; border-radius: 15px 15px 0 15px !important; border: none; }
+    
+    /* إجبار النوافذ المنبثقة على العمل فوراً وتجاوز أي خطأ في الـ CSS */
+    .modal.show-modal, .modal.open { display: flex !important; opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; z-index: 99999; }
+    .modal.hide-modal { display: none !important; }
   </style>
 </head>
 <body>
@@ -69,21 +73,20 @@
 
   <button class="fab" id="supportButton" aria-label="فتح الدعم الفني">💬</button>
   
-  <div class="modal" id="supportModal" aria-hidden="true"><section class="modal-card" role="dialog" aria-modal="true" aria-label="الدعم الفني">
+  <div class="modal hide-modal" id="supportModal" aria-hidden="true"><section class="modal-card" role="dialog" aria-modal="true" aria-label="الدعم الفني">
     <div class="modal-head"><div><h3>الدعم الفني</h3><p>يرد فريق FADIL TRADING عليك هنا مباشرة.</p></div><button class="icon-btn" data-close="supportModal" aria-label="إغلاق">×</button></div>
     <div class="chat-log" id="chatLog"><div class="empty">سجّل دخولك لبدء محادثة آمنة مع الدعم.</div></div>
     <form class="chat-form" id="chatForm"><input id="chatInput" maxlength="1500" placeholder="اكتب رسالتك..." autocomplete="off"><button class="btn" type="submit">إرسال</button></form>
   </section></div>
 
-  <div class="modal" id="authModal" aria-hidden="true"><section class="modal-card" role="dialog" aria-modal="true" aria-label="الحساب">
+  <div class="modal hide-modal" id="authModal" aria-hidden="true"><section class="modal-card" role="dialog" aria-modal="true" aria-label="الحساب">
     <div class="modal-head"><div><h3 id="authTitle">تسجيل الدخول</h3><p>حسابك يحفظ تقدمك ويعرض حالة عضويتك.</p></div><button class="icon-btn" data-close="authModal" aria-label="إغلاق">×</button></div>
     <form class="form-grid" id="authForm" style="padding:20px"><input id="nameInput" placeholder="الاسم الكامل" maxlength="80" style="display:none"><input id="emailInput" type="email" placeholder="البريد الإلكتروني" required><input id="passwordInput" type="password" placeholder="كلمة المرور (8 أحرف على الأقل)" minlength="8" required><button class="btn" type="submit" id="authSubmit">دخول</button><button class="icon-btn" type="button" id="authSwitch">ليس لديك حساب؟ أنشئ حساباً</button></form>
   </section></div>
 
-  <div class="modal" id="subscriptionModal" aria-hidden="true"><section class="modal-card" role="dialog" aria-modal="true" aria-label="طلب اشتراك">
+  <div class="modal hide-modal" id="subscriptionModal" aria-hidden="true"><section class="modal-card" role="dialog" aria-modal="true" aria-label="طلب اشتراك">
     <div class="modal-head"><div><h3>طلب تفعيل العضوية</h3><p>أرفق إثبات الدفع ليتم مراجعته من الإدارة.</p></div><button class="icon-btn" data-close="subscriptionModal" aria-label="إغلاق">×</button></div>
     <form class="form-grid" id="subscriptionForm" style="padding:20px">
-      <!-- رسالة التحويل المضافة هنا -->
       <div class="subscription-payment">
         <span>رسوم العضوية</span>
         <div style="text-align: center; margin-bottom: 5px; font-weight: bold; color: #fff; font-size: 0.95rem;">التحويل عن طريق الماستر كارد</div>
@@ -98,9 +101,42 @@
   </section></div>
 
   <script>
-    const state = { token: localStorage.getItem('fadilToken'), user: JSON.parse(localStorage.getItem('fadilUser') || 'null'), register: false };
+    // حماية قوية ضد البيانات التالفة في المتصفح التي تسبب توقف الجافاسكربت
+    let safeUser = null;
+    try {
+      const storedUser = localStorage.getItem('fadilUser');
+      if (storedUser && storedUser !== 'undefined' && storedUser !== 'null') {
+        safeUser = JSON.parse(storedUser);
+      }
+    } catch (e) { console.warn('تم تنظيف بيانات مستخدم قديمة تالفة.'); localStorage.removeItem('fadilUser'); }
+
+    let safeToken = localStorage.getItem('fadilToken');
+    if (safeToken === 'undefined' || safeToken === 'null') { safeToken = null; localStorage.removeItem('fadilToken'); }
+
+    const state = { token: safeToken, user: safeUser, register: false };
     const $ = (selector) => document.querySelector(selector);
     const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    
+    // دالة آمنة لفتح النوافذ المنبثقة
+    function showModal(id) { 
+      const el = document.getElementById(id);
+      if(el) {
+        el.classList.remove('hide-modal');
+        el.classList.add('show-modal', 'open');
+        el.setAttribute('aria-hidden', 'false');
+      }
+    }
+    
+    // دالة آمنة لإغلاق النوافذ المنبثقة
+    function closeModal(id) { 
+      const el = document.getElementById(id);
+      if(el) {
+        el.classList.remove('show-modal', 'open');
+        el.classList.add('hide-modal');
+        el.setAttribute('aria-hidden', 'true');
+      }
+    }
+
     const api = async (url, options = {}) => {
       const headers = { ...(options.body instanceof FormData ? {} : {'Content-Type':'application/json'}), ...(options.headers || {}) };
       if (state.token) headers.Authorization = `Bearer ${state.token}`;
@@ -112,30 +148,53 @@
       return data;
     };
     
-    function showModal(id) { $(`#${id}`).classList.add('open'); }
-    function closeModal(id) { $(`#${id}`).classList.remove('open'); }
-    
     function updateAccount() {
-      const loggedIn = Boolean(state.user); $('#accountButton').textContent = loggedIn ? `خروج · ${state.user.name}` : 'تسجيل الدخول';
-      $('#membershipLabel').textContent = state.user?.isSubscribed ? 'الحالة: عضوية نشطة ✓' : 'الحالة: زائر';
+      const loggedIn = Boolean(state.user); 
+      const accBtn = $('#accountButton');
+      if (accBtn) accBtn.textContent = loggedIn ? `خروج · ${state.user.name}` : 'تسجيل الدخول';
+      
+      const memLabel = $('#membershipLabel');
+      if (memLabel) memLabel.textContent = state.user?.isSubscribed ? 'الحالة: عضوية نشطة ✓' : 'الحالة: زائر';
+      
       document.querySelectorAll('.premium-course').forEach(card => card.classList.toggle('unlocked', Boolean(state.user?.isSubscribed || state.user?.role === 'admin')));
     }
-    function showNotice(message) { const notice = $('#databaseNotice'); notice.textContent = message; notice.classList.add('show'); }
+    
+    function showNotice(message) { 
+      const notice = $('#databaseNotice'); 
+      if (notice) { notice.textContent = message; notice.classList.add('show'); }
+    }
     
     async function loadStatus() {
       if (!state.token) return updateAccount();
-      try { const data = await api('/api/user-status'); state.user = data.user; localStorage.setItem('fadilUser', JSON.stringify(data.user)); updateAccount(); loadManagedCourses(); loadQuizFiles(); }
-      catch (error) { if (error.message.includes('قاعدة البيانات')) showNotice(error.message); else { localStorage.removeItem('fadilToken'); localStorage.removeItem('fadilUser'); state.token = null; state.user = null; updateAccount(); } }
+      try { 
+        const data = await api('/api/user-status'); 
+        state.user = data.user; 
+        localStorage.setItem('fadilUser', JSON.stringify(data.user)); 
+        updateAccount(); loadManagedCourses(); loadQuizFiles(); 
+      }
+      catch (error) { 
+        if (error.message.includes('قاعدة البيانات')) showNotice(error.message); 
+        else { localStorage.removeItem('fadilToken'); localStorage.removeItem('fadilUser'); state.token = null; state.user = null; updateAccount(); } 
+      }
     }
 
     async function loadMessages() {
       if (!state.token) return;
-      try { const messages = await api('/api/support/messages'); const log = $('#chatLog'); log.innerHTML = messages.length ? messages.map(m => `<div class="bubble ${m.senderRole === 'admin' ? 'admin':'student'}">${escapeHtml(m.body)}<time>${new Date(m.createdAt).toLocaleString('ar-IQ')}</time></div>`).join('') : '<div class="empty">أهلاً بك، كيف نساعدك اليوم؟</div>'; log.scrollTop = log.scrollHeight; }
-      catch (error) { $('#chatLog').innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; }
+      try { 
+        const messages = await api('/api/support/messages'); 
+        const log = $('#chatLog'); 
+        if (log) {
+          log.innerHTML = messages.length ? messages.map(m => `<div class="bubble ${m.senderRole === 'admin' ? 'admin':'student'}">${escapeHtml(m.body)}<time>${new Date(m.createdAt).toLocaleString('ar-IQ')}</time></div>`).join('') : '<div class="empty">أهلاً بك، كيف نساعدك اليوم؟</div>'; 
+          log.scrollTop = log.scrollHeight; 
+        }
+      } catch (error) { 
+        if ($('#chatLog')) $('#chatLog').innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; 
+      }
     }
 
     async function loadNews() {
       const list = $('#newsList');
+      if (!list) return;
       try {
         const news = await api('/api/news');
         list.innerHTML = news.length ? news.map(item => `<article class="news-item"><div class="news-meta"><span>${escapeHtml(item.category)}</span><time>${new Date(item.createdAt).toLocaleDateString('ar-IQ')}</time></div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary)}</p>${item.sourceUrl ? `<a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noopener noreferrer">قراءة المصدر ←</a>` : ''}</article>`).join('') : '<div class="empty">لا توجد أخبار منشورة حالياً. تابعنا قريباً.</div>';
@@ -144,6 +203,7 @@
 
     async function loadAnalyses() {
       const container = $('#publishedAnalyses');
+      if (!container) return;
       try {
         const analyses = await api('/api/analyses');
         container.innerHTML = analyses.length ? `<h3 class="managed-title">تحليلات الإدارة</h3>${analyses.map(analysis => `<article class="analysis-card"><div><span class="course-tag">تحليل منشور</span><h3>${escapeHtml(analysis.title)}</h3><p>${escapeHtml(analysis.body \vert{}\vert{} 'تحليل مرفق من فريق FADIL TRADING.')}</p></div>${analysis.attachmentPath ? `<a class="btn btn-outline" href="${escapeHtml(analysis.attachmentPath)}" target="_blank" rel="noopener">فتح المرفق</a>` : ''}</article>`).join('')}` : '';
@@ -152,6 +212,7 @@
 
     async function loadManagedCourses() {
       const container = $('#managedCourses');
+      if (!container) return;
       if (!state.token) { container.innerHTML = '<div class="empty">سجّل دخولك لعرض الكورسات التي تنشرها الإدارة.</div>'; return; }
       try {
         const courses = await api('/api/courses');
@@ -159,23 +220,28 @@
       } catch (error) { container.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; }
     }
 
-    async function openManagedCourse(courseId) {
+    window.openManagedCourse = async function(courseId) {
       if (!state.token) return showModal('authModal');
-      const viewer = $('#courseViewer'); viewer.hidden = false; viewer.innerHTML = '<div class="empty">جارٍ تجهيز محتوى الكورس...</div>'; viewer.scrollIntoView({ behavior:'smooth', block:'center' });
+      const viewer = $('#courseViewer'); 
+      if (!viewer) return;
+      viewer.hidden = false; 
+      viewer.innerHTML = '<div class="empty">جارٍ تجهيز محتوى الكورس...</div>'; 
+      viewer.scrollIntoView({ behavior:'smooth', block:'center' });
       try {
         await api(`/api/courses/${courseId}/select`, { method:'POST' });
         const data = await api(`/api/courses/${courseId}/content`);
         viewer.innerHTML = `<div class="panel-title"><div><b>${escapeHtml(data.course.title)}</b><small>${escapeHtml(data.course.description || 'محتوى الكورس')}</small></div></div>${data.lessons.length ? `<div class="lesson-list">${data.lessons.map(lesson => `<article class="lesson-item"><div><b>${escapeHtml(lesson.title)}</b><p>${escapeHtml(lesson.description || '')}</p>${lesson.videoPath ? `<video controls preload="metadata" src="${escapeHtml(lesson.videoPath)}"></video>` : lesson.videoUrl ? `<a class="accent" href="${escapeHtml(lesson.videoUrl)}" target="_blank" rel="noopener">فتح المقطع</a>` : ''}${lesson.attachmentPath ? `<a class="accent" href="${escapeHtml(lesson.attachmentPath)}" target="_blank" rel="noopener">تحميل مرفق الدرس</a>` : ''}</div><button class="btn btn-outline" onclick="completeLesson('${lesson._id}')">تمت المشاهدة</button></article>`).join('')}</div>` : '<div class="empty">لم ترفع الإدارة مقاطع لهذا الكورس بعد.</div>'}${data.resources.length ? `<div class="resource-list"><b>ملفات الكورس</b>${data.resources.map(resource => `<a href="${escapeHtml(resource.filePath)}" target="_blank" rel="noopener" style="display:block; padding:10px; background:#111; border-radius:8px; margin-top:5px;">${escapeHtml(resource.title)} ↓</a>`).join('')}</div>` : ''}`;
         loadStatus();
       } catch (error) { viewer.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; }
-    }
+    };
 
-    async function completeLesson(lessonId) {
+    window.completeLesson = async function(lessonId) {
       try { await api(`/api/lessons/${lessonId}/progress`, { method:'POST', body:JSON.stringify({ status:'completed' }) }); alert('تم تسجيل إكمال الدرس.'); loadStatus(); } catch (error) { alert(error.message); }
-    }
+    };
 
     async function loadQuizFiles() {
       const container = $('#quizFilesList');
+      if (!container) return;
       if (!state.token) { container.innerHTML = '<div class="empty">سجّل دخولك لعرض ملفات الاختبارات.</div>'; return; }
       try {
         const files = await api('/api/quiz-files');
@@ -184,22 +250,83 @@
     }
 
     function initializeChart() {
+      const container = $('#tradingViewChart');
+      if (!container) return;
       const script = document.createElement('script');
       script.type = 'text/javascript'; script.async = true;
       script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
       script.text = JSON.stringify({ autosize:true, symbol:'BITSTAMP:BTCUSD', interval:'60', timezone:'Etc/UTC', theme:'dark', style:'1', locale:'ar_AE', allow_symbol_change:true, calendar:false, support_host:'https://www.tradingview.com' });
-      $('#tradingViewChart').appendChild(script);
+      container.appendChild(script);
     }
 
-    $('#accountButton').onclick = () => { if (!state.user) showModal('authModal'); else { localStorage.removeItem('fadilToken'); localStorage.removeItem('fadilUser'); state.token = null; state.user = null; updateAccount(); loadManagedCourses(); loadQuizFiles(); } };
-    $('#joinButton').onclick = () => state.user ? showModal('subscriptionModal') : showModal('authModal'); $('#supportButton').onclick = () => { showModal('supportModal'); loadMessages(); };
-    document.querySelectorAll('[data-close]').forEach(button => button.onclick = () => closeModal(button.dataset.close));
-    $('#authSwitch').onclick = () => { state.register = !state.register; $('#nameInput').style.display = state.register ? 'block':'none'; $('#authTitle').textContent = state.register ? 'إنشاء حساب جديد':'تسجيل الدخول'; $('#authSubmit').textContent = state.register ? 'إنشاء الحساب':'دخول'; $('#authSwitch').textContent = state.register ? 'لديك حساب بالفعل؟ سجّل الدخول':'ليس لديك حساب؟ أنشئ حساباً'; };
+    // ربط الأزرار بطريقة آمنة تماماً
+    function safeBind(id, event, handler) {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener(event, handler);
+    }
+
+    safeBind('accountButton', 'click', () => { 
+      if (!state.user) showModal('authModal'); 
+      else { localStorage.removeItem('fadilToken'); localStorage.removeItem('fadilUser'); state.token = null; state.user = null; updateAccount(); loadManagedCourses(); loadQuizFiles(); } 
+    });
     
-    $('#authForm').onsubmit = async (event) => { event.preventDefault(); try { const payload = { email:$('#emailInput').value, password:$('#passwordInput').value }; if (state.register) payload.name = $('#nameInput').value; const data = await api(`/api/auth/${state.register ? 'register':'login'}`, { method:'POST', body:JSON.stringify(payload) }); state.token=data.token; state.user=data.user; localStorage.setItem('fadilToken',state.token); localStorage.setItem('fadilUser',JSON.stringify(state.user)); closeModal('authModal'); updateAccount(); loadManagedCourses(); loadQuizFiles(); } catch(error) { alert(error.message); } };
-    $('#chatForm').onsubmit = async (event) => { event.preventDefault(); const input = $('#chatInput'); if (!state.token) return showModal('authModal'); if (!input.value.trim()) return; try { await api('/api/support/messages',{method:'POST',body:JSON.stringify({body:input.value})}); input.value=''; loadMessages(); } catch(error) { alert(error.message); } };
-    $('#subscriptionForm').onsubmit = async (event) => { event.preventDefault(); if (!state.token) return showModal('authModal'); const form = new FormData(); form.append('plan', 'monthly'); form.append('note', $('#subscriptionNote').value); form.append('paymentProof', $('#proofInput').files[0]); try { await api('/api/subscriptions', { method:'POST', body:form }); closeModal('subscriptionModal'); event.target.reset(); alert('تم إرسال طلبك بنجاح. ستُفتح الدروس فور اعتماده من الإدارة.'); } catch (error) { alert(error.message); } };
+    safeBind('joinButton', 'click', () => state.user ? showModal('subscriptionModal') : showModal('authModal'));
     
-    $('#year').textContent = new Date().getFullYear(); updateAccount(); loadStatus(); loadNews(); loadAnalyses(); loadManagedCourses(); loadQuizFiles(); initializeChart();
+    safeBind('supportButton', 'click', () => { showModal('supportModal'); loadMessages(); });
+    
+    document.querySelectorAll('[data-close]').forEach(button => {
+      button.addEventListener('click', () => closeModal(button.dataset.close));
+    });
+    
+    safeBind('authSwitch', 'click', () => { 
+      state.register = !state.register; 
+      $('#nameInput').style.display = state.register ? 'block':'none'; 
+      $('#authTitle').textContent = state.register ? 'إنشاء حساب جديد':'تسجيل الدخول'; 
+      $('#authSubmit').textContent = state.register ? 'إنشاء الحساب':'دخول'; 
+      $('#authSwitch').textContent = state.register ? 'لديك حساب بالفعل؟ سجّل الدخول':'ليس لديك حساب؟ أنشئ حساباً'; 
+    });
+    
+    safeBind('authForm', 'submit', async (event) => { 
+      event.preventDefault(); 
+      try { 
+        const payload = { email:$('#emailInput').value, password:$('#passwordInput').value }; 
+        if (state.register) payload.name = $('#nameInput').value; 
+        const data = await api(`/api/auth/${state.register ? 'register':'login'}`, { method:'POST', body:JSON.stringify(payload) }); 
+        state.token=data.token; state.user=data.user; 
+        localStorage.setItem('fadilToken',state.token); 
+        localStorage.setItem('fadilUser',JSON.stringify(state.user)); 
+        closeModal('authModal'); updateAccount(); loadManagedCourses(); loadQuizFiles(); 
+      } catch(error) { alert(error.message); } 
+    });
+    
+    safeBind('chatForm', 'submit', async (event) => { 
+      event.preventDefault(); 
+      const input = $('#chatInput'); 
+      if (!state.token) return showModal('authModal'); 
+      if (!input.value.trim()) return; 
+      try { 
+        await api('/api/support/messages',{method:'POST',body:JSON.stringify({body:input.value})}); 
+        input.value=''; loadMessages(); 
+      } catch(error) { alert(error.message); } 
+    });
+    
+    safeBind('subscriptionForm', 'submit', async (event) => { 
+      event.preventDefault(); 
+      if (!state.token) return showModal('authModal'); 
+      const form = new FormData(); 
+      form.append('plan', 'monthly'); 
+      form.append('note', $('#subscriptionNote').value); 
+      form.append('paymentProof', $('#proofInput').files[0]); 
+      try { 
+        await api('/api/subscriptions', { method:'POST', body:form }); 
+        closeModal('subscriptionModal'); event.target.reset(); 
+        alert('تم إرسال طلبك بنجاح. ستُفتح الدروس فور اعتماده من الإدارة.'); 
+      } catch (error) { alert(error.message); } 
+    });
+    
+    if($('#year')) $('#year').textContent = new Date().getFullYear(); 
+    
+    // تشغيل التحديثات عند التحميل
+    updateAccount(); loadStatus(); loadNews(); loadAnalyses(); loadManagedCourses(); loadQuizFiles(); initializeChart();
   </script>
 </body></html>
