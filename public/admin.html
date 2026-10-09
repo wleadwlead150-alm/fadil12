@@ -6,7 +6,6 @@
   <title>إدارة FADIL TRADING</title>
   <link rel="stylesheet" href="/style.css">
   <style>
-    /* تحسينات الدردشة ليكون الأدمن أزرق وعلى اليسار، والطالب أخضر وعلى اليمين */
     .chat-log { display: flex; flex-direction: column; gap: 10px; padding: 15px; }
     .bubble { padding: 10px 15px; max-width: 75%; position: relative; font-size: 0.95rem; }
     .bubble time { display: block; font-size: 0.75rem; opacity: 0.8; margin-top: 5px; }
@@ -38,6 +37,7 @@
         <a href="#news">إدارة الأخبار</a>
         <a href="#analyses">التحليلات</a>
         <a href="#quizFiles">ملفات الاختبارات</a>
+        <a href="#resultFiles">نتائج الطلاب</a>
         <a href="#performance">أداء ونتائج الطلاب</a>
         <a href="#students">إدارة الطلاب</a>
         <a href="/home.html">عرض المنصة</a>
@@ -64,8 +64,25 @@
           <h2>إدارة المحتوى التعليمي</h2>
           <div class="content-forms">
             <form id="courseForm" class="form-grid content-form"><b>إضافة كورس</b><input id="courseTitle" maxlength="160" placeholder="اسم الكورس" required><input id="courseCategory" maxlength="80" placeholder="التصنيف"><textarea id="courseDescription" rows="3" placeholder="وصف الكورس"></textarea><label>صورة الكورس<input id="courseThumbnail" type="file" accept="image/*"></label><label>ملف مرفق اختياري<input id="courseAttachment" type="file"></label><button class="btn">رفع الكورس</button></form>
-            <form id="lessonForm" class="form-grid content-form"><b>إضافة مقطع أو درس</b><select id="lessonCourse"><option value="">اختر الكورس</option></select><input id="lessonTitle" maxlength="160" placeholder="عنوان المقطع" required><textarea id="lessonDescription" rows="3" placeholder="وصف المقطع"></textarea><input id="lessonVideoUrl" type="url" placeholder="رابط فيديو خارجي (اختياري)"><label>ملف فيديو<input id="lessonVideo" type="file" accept="video/*"></label><label>ملف مرفق<input id="lessonAttachment" type="file"></label><button class="btn">رفع المقطع</button></form>
-            <form id="resourceForm" class="form-grid content-form"><b>إضافة ملف للطلاب</b><select id="resourceCourse"><option value="">اختر الكورس</option></select><input id="resourceTitle" maxlength="160" placeholder="اسم الملف" required><input id="resourceFile" type="file" required><button class="btn">رفع الملف</button></form>
+            
+            <form id="lessonForm" class="form-grid content-form">
+              <b>إضافة مقطع أو درس</b>
+              <select id="lessonCourse" required><option value="">اختر الكورس</option></select>
+              <input id="lessonTitle" maxlength="160" placeholder="عنوان المقطع" required>
+              <textarea id="lessonDescription" rows="3" placeholder="وصف المقطع"></textarea>
+              <input id="lessonVideoUrl" type="url" placeholder="رابط فيديو خارجي (اختياري)">
+              <label>ملف فيديو<input id="lessonVideo" type="file" accept="video/*"></label>
+              <label>ملف مرفق<input id="lessonAttachment" type="file"></label>
+              <button class="btn">رفع المقطع</button>
+            </form>
+            
+            <form id="resourceForm" class="form-grid content-form">
+              <b>إضافة ملف للطلاب</b>
+              <select id="resourceCourse" required><option value="">اختر الكورس</option></select>
+              <input id="resourceTitle" maxlength="160" placeholder="اسم الملف" required>
+              <input id="resourceFile" type="file" required>
+              <button class="btn">رفع الملف</button>
+            </form>
           </div>
           <div id="contentList" class="table-list"><div class="empty">جارٍ تحميل المحتوى...</div></div>
         </section>
@@ -81,15 +98,26 @@
         <section class="panel full" id="quizFiles">
           <h2>إدارة ملفات الاختبارات</h2>
           <form id="quizFileForm" class="form-grid content-form">
-            <input id="quizFileTitle" maxlength="160" placeholder="عنوان الملف (مثال: ملف أسئلة الوحدة الأولى)" required>
+            <input id="quizFileTitle" maxlength="160" placeholder="عنوان الملف (مثال: أسئلة الوحدة الأولى)" required>
             <input id="quizFileDoc" type="file" required>
             <button class="btn">رفع الملف</button>
           </form>
           <div id="quizFileList" class="table-list"><div class="empty">جارٍ تحميل الملفات...</div></div>
         </section>
 
+        <!-- ملفات نتائج الطلاب -->
+        <section class="panel full" id="resultFiles">
+          <h2>رفع ملفات نتائج الطلاب</h2>
+          <form id="resultFileForm" class="form-grid content-form">
+            <input id="resultFileTitle" maxlength="160" placeholder="عنوان الملف (مثال: نتائج شهر أكتوبر)" required>
+            <input id="resultFileDoc" type="file" required>
+            <button class="btn">رفع ملف النتائج</button>
+          </form>
+          <div id="resultFileList" class="table-list"><div class="empty">جارٍ تحميل النتائج...</div></div>
+        </section>
+
         <!-- أداء وإدارة الطلاب -->
-        <section class="panel full" id="performance"><h2>أداء ونتائج الطلاب</h2><div id="performanceList" class="table-list"><div class="empty">جارٍ تحميل الأداء...</div></div></section>
+        <section class="panel full" id="performance"><h2>مراجعة أداء الطلاب</h2><div id="performanceList" class="table-list"><div class="empty">جارٍ تحميل الأداء...</div></div></section>
         <section class="panel full" id="students"><h2>إدارة الطلاب</h2><div id="studentList" class="table-list"><div class="empty">جارٍ تحميل الطلاب...</div></div></section>
       </div>
     </main>
@@ -151,9 +179,14 @@
     async function remAnalysis(id) { if(confirm('حذف؟')) try { await api(`/api/admin/analyses/${id}`, {method:'DELETE'}); loadAnalyses(); } catch(e) { alert(e.message); } }
 
     async function loadQuizFiles() {
-      try { const f = await api('/api/admin/quiz-files'); $('#quizFileList').innerHTML = f.length ? f.map(x => `<div class="table-item compact-item"><div><b>${esc(x.title)}</b><small>${esc(x.originalName)}</small></div><button class="btn btn-danger" onclick="remQuizFile('${x._id}')">حذف</button></div>`).join('') : '<div class="empty">لا توجد ملفات.</div>'; } catch(e) { $('#quizFileList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+      try { const f = await api('/api/admin/quiz-files'); $('#quizFileList').innerHTML = f.length ? f.map(x => `<div class="table-item compact-item"><div><b>${esc(x.title)}</b><small>${esc(x.originalName)}</small></div><button class="btn btn-danger" onclick="remQuizFile('${x._id}')">حذف</button></div>`).join('') : '<div class="empty">لا توجد ملفات اختبارات.</div>'; } catch(e) { $('#quizFileList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
     }
     async function remQuizFile(id) { if(confirm('حذف؟')) try { await api(`/api/admin/quiz-files/${id}`, {method:'DELETE'}); loadQuizFiles(); } catch(e) { alert(e.message); } }
+
+    async function loadResultFiles() {
+      try { const f = await api('/api/admin/result-files'); $('#resultFileList').innerHTML = f.length ? f.map(x => `<div class="table-item compact-item"><div><b>${esc(x.title)}</b><small>${esc(x.originalName)}</small></div><button class="btn btn-danger" onclick="remResultFile('${x._id}')">حذف</button></div>`).join('') : '<div class="empty">لا توجد ملفات نتائج.</div>'; } catch(e) { $('#resultFileList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+    }
+    async function remResultFile(id) { if(confirm('حذف؟')) try { await api(`/api/admin/result-files/${id}`, {method:'DELETE'}); loadResultFiles(); } catch(e) { alert(e.message); } }
 
     async function loadAdminNews() {
       try { const n = await api('/api/admin/news'); $('#adminNewsList').innerHTML = n.length ? n.map(x => `<div class="table-item"><div><b>${esc(x.title)}</b><p class="item-summary">${esc(x.summary)}</p></div><button class="btn btn-danger" onclick="remNews('${x._id}')">حذف</button></div>`).join('') : '<div class="empty">لا أخبار.</div>'; } catch(e) { $('#adminNewsList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
@@ -168,13 +201,14 @@
     }
     async function remStudent(id) { if(confirm('حذف الطالب نهائياً؟')) try { await api(`/api/admin/students/${id}`, {method:'DELETE'}); loadStudents(); } catch(e) { alert(e.message); } }
 
-    async function loadAll() { await Promise.all([loadTickets(), loadSubscriptions(), loadContent(), loadAnalyses(), loadQuizFiles(), loadAdminNews(), loadPerformance(), loadStudents()]); }
+    async function loadAll() { await Promise.all([loadTickets(), loadSubscriptions(), loadContent(), loadAnalyses(), loadQuizFiles(), loadResultFiles(), loadAdminNews(), loadPerformance(), loadStudents()]); }
 
     $('#loginForm').onsubmit = async e => { e.preventDefault(); try { const d = await api('/api/auth/login', {method:'POST', body:JSON.stringify({email:$('#email').value, password:$('#password').value})}); if(d.user.role!=='admin') throw new Error('مرفوض.'); state.token = d.token; state.user = d.user; localStorage.setItem('fadilToken', d.token); openDashboard(); } catch(err) { failure(err.message); } };
     $('#replyForm').onsubmit = async e => { e.preventDefault(); if(!state.selectedUserId) return; try { await api(`/api/admin/tickets/${state.selectedUserId}/reply`, {method:'POST', body:JSON.stringify({body:$('#replyText').value})}); $('#replyText').value = ''; selectTicket(state.selectedUserId); loadTickets(); } catch(err) { alert(err.message); } };
     $('#newsForm').onsubmit = async e => { e.preventDefault(); try { await api('/api/admin/news', {method:'POST', body:JSON.stringify({title:$('#newsTitle').value, category:$('#newsCategory').value, summary:$('#newsSummary').value, sourceUrl:$('#newsSource').value})}); e.target.reset(); $('#newsCategory').value='تحديث السوق'; loadAdminNews(); } catch(err) { alert(err.message); } };
     $('#analysisForm').onsubmit = async e => { e.preventDefault(); try { const f = new FormData(); f.append('title', $('#analysisTitle').value); f.append('body', $('#analysisBody').value); if($('#analysisAttachment').files[0]) f.append('attachment', $('#analysisAttachment').files[0]); await api('/api/admin/analyses', {method:'POST', body:f}); e.target.reset(); loadAnalyses(); } catch(err) { alert(err.message); } };
     $('#quizFileForm').onsubmit = async e => { e.preventDefault(); try { const f = new FormData(); f.append('title', $('#quizFileTitle').value); f.append('file', $('#quizFileDoc').files[0]); await api('/api/admin/quiz-files', {method:'POST', body:f}); e.target.reset(); loadQuizFiles(); } catch(err) { alert(err.message); } };
+    $('#resultFileForm').onsubmit = async e => { e.preventDefault(); try { const f = new FormData(); f.append('title', $('#resultFileTitle').value); f.append('file', $('#resultFileDoc').files[0]); await api('/api/admin/result-files', {method:'POST', body:f}); e.target.reset(); loadResultFiles(); } catch(err) { alert(err.message); } };
     $('#courseForm').onsubmit = async e => { e.preventDefault(); try { const f = new FormData(); f.append('title', $('#courseTitle').value); f.append('category', $('#courseCategory').value); f.append('description', $('#courseDescription').value); if($('#courseThumbnail').files[0]) f.append('thumbnail', $('#courseThumbnail').files[0]); if($('#courseAttachment').files[0]) f.append('attachment', $('#courseAttachment').files[0]); await api('/api/admin/courses', {method:'POST', body:f}); e.target.reset(); loadContent(); } catch(err) { alert(err.message); } };
     $('#lessonForm').onsubmit = async e => { e.preventDefault(); try { const f = new FormData(); f.append('courseId', $('#lessonCourse').value); f.append('title', $('#lessonTitle').value); f.append('description', $('#lessonDescription').value); f.append('videoUrl', $('#lessonVideoUrl').value); if($('#lessonVideo').files[0]) f.append('video', $('#lessonVideo').files[0]); if($('#lessonAttachment').files[0]) f.append('attachment', $('#lessonAttachment').files[0]); await api('/api/admin/lessons', {method:'POST', body:f}); e.target.reset(); loadContent(); } catch(err) { alert(err.message); } };
     $('#resourceForm').onsubmit = async e => { e.preventDefault(); try { const f = new FormData(); f.append('courseId', $('#resourceCourse').value); f.append('title', $('#resourceTitle').value); f.append('file', $('#resourceFile').files[0]); await api('/api/admin/resources', {method:'POST', body:f}); e.target.reset(); loadContent(); } catch(err) { alert(err.message); } };
