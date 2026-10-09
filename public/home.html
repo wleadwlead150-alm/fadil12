@@ -4,6 +4,14 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#050505"><title>FADIL TRADING | منصة التداول</title>
   <link rel="stylesheet" href="/style.css">
+  <style>
+    /* تحسينات الدردشة */
+    .chat-log { display: flex; flex-direction: column; gap: 10px; padding: 15px; }
+    .bubble { padding: 10px 15px; max-width: 75%; position: relative; font-size: 0.95rem; }
+    .bubble time { display: block; font-size: 0.75rem; opacity: 0.8; margin-top: 5px; }
+    .bubble.admin { background-color: #007bff !important; align-self: flex-start !important; color: white !important; border-radius: 15px 15px 15px 0 !important; border: none; }
+    .bubble.student { background-color: #28a745 !important; align-self: flex-end !important; color: white !important; border-radius: 15px 15px 0 15px !important; border: none; }
+  </style>
 </head>
 <body>
   <header class="site-header"><div class="container nav">
@@ -49,26 +57,18 @@
       </div>
       <div class="published-analyses" id="publishedAnalyses"></div>
     </section>
+
+    <!-- قسم ملفات الاختبارات الجديد -->
     <section class="container section" id="tests">
-      <div class="section-head"><div><span class="eyebrow">KNOWLEDGE CHECK</span><h2>اختباراتك التعليمية</h2><p>اختبر فهمك بعد كل وحدة؛ تُحفظ كل محاولة في ملفك ليتمكن المدرب من متابعة تقدمك.</p></div></div>
-      <div class="quiz-layout">
-        <aside class="panel quiz-catalog" aria-label="وحدات الاختبارات">
-          <span class="quiz-caption">اختر وحدة</span>
-          <button class="quiz-module active" data-quiz-module="basics"><span>01</span><div><b>أساسيات التداول</b><small>3 أسئلة</small></div></button>
-          <button class="quiz-module" data-quiz-module="risk"><span>02</span><div><b>إدارة رأس المال</b><small>3 أسئلة</small></div></button>
-        </aside>
-        <section class="panel quiz-workspace">
-          <div class="panel-title"><div><b id="quizTitle">اختبار أساسيات التداول</b><small id="quizDescription">اختر الإجابة الأنسب لكل سؤال.</small></div><span class="status" id="quizCounter">3 أسئلة</span></div>
-          <form id="quizForm" class="quiz-form"></form>
-          <div class="quiz-feedback" id="quizFeedback" aria-live="polite"></div>
-        </section>
-      </div>
-      <div class="quiz-history" id="quizHistory"></div>
+      <div class="section-head"><div><span class="eyebrow">KNOWLEDGE CHECK</span><h2>ملفات الاختبارات</h2><p>حمل ملفات الأسئلة والأجوبة لمراجعة مستواك (تُفتح لأصحاب العضوية النشطة).</p></div></div>
+      <div class="quiz-files-list panel" id="quizFilesList" style="padding: 20px;"><div class="empty">جارٍ تحميل الملفات...</div></div>
     </section>
   </main>
+  
   <footer class="footer">© <span id="year"></span> FADIL TRADING — التعليم أولاً، والانضباط دائمًا.</footer>
 
   <button class="fab" id="supportButton" aria-label="فتح الدعم الفني">💬</button>
+  
   <div class="modal" id="supportModal" aria-hidden="true"><section class="modal-card" role="dialog" aria-modal="true" aria-label="الدعم الفني">
     <div class="modal-head"><div><h3>الدعم الفني</h3><p>يرد فريق FADIL TRADING عليك هنا مباشرة.</p></div><button class="icon-btn" data-close="supportModal" aria-label="إغلاق">×</button></div>
     <div class="chat-log" id="chatLog"><div class="empty">سجّل دخولك لبدء محادثة آمنة مع الدعم.</div></div>
@@ -82,24 +82,23 @@
 
   <div class="modal" id="subscriptionModal" aria-hidden="true"><section class="modal-card" role="dialog" aria-modal="true" aria-label="طلب اشتراك">
     <div class="modal-head"><div><h3>طلب تفعيل العضوية</h3><p>أرفق إثبات الدفع ليتم مراجعته من الإدارة.</p></div><button class="icon-btn" data-close="subscriptionModal" aria-label="إغلاق">×</button></div>
-    <form class="form-grid" id="subscriptionForm" style="padding:20px"><div class="subscription-payment"><span>رسوم العضوية</span><strong>100,000 <small>د.ع</small></strong><p>رقم التحويل المالي المعتمد</p><b dir="ltr">2354412252</b></div><input id="proofInput" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" required><textarea id="subscriptionNote" maxlength="500" rows="3" placeholder="ملاحظة اختيارية للإدارة"></textarea><button class="btn" type="submit">إرسال طلب التفعيل</button></form>
+    <form class="form-grid" id="subscriptionForm" style="padding:20px">
+      <!-- رسالة التحويل المضافة هنا -->
+      <div class="subscription-payment">
+        <span>رسوم العضوية</span>
+        <div style="text-align: center; margin-bottom: 5px; font-weight: bold; color: #fff; font-size: 0.95rem;">التحويل عن طريق الماستر كارد</div>
+        <strong>100,000 <small>د.ع</small></strong>
+        <p>رقم التحويل المالي المعتمد</p>
+        <b dir="ltr">2354412252</b>
+      </div>
+      <input id="proofInput" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" required>
+      <textarea id="subscriptionNote" maxlength="500" rows="3" placeholder="ملاحظة اختيارية للإدارة"></textarea>
+      <button class="btn" type="submit">إرسال طلب التفعيل</button>
+    </form>
   </section></div>
 
   <script>
     const state = { token: localStorage.getItem('fadilToken'), user: JSON.parse(localStorage.getItem('fadilUser') || 'null'), register: false };
-    const quizContent = {
-      basics: { title:'اختبار أساسيات التداول', questions:[
-        { text:'ما المقصود بالـ Stop Loss؟', options:['أمر لزيادة حجم الصفقة','أمر يحد من الخسارة عند مستوى محدد','مؤشر لقياس الاتجاه'] },
-        { text:'أي سوق يعمل عادةً على مدار 24 ساعة خلال خمسة أيام أسبوعياً؟', options:['سوق الفوركس','سوق الأسهم المحلية فقط','سوق السلع فقط'] },
-        { text:'ماذا يمثل الزوج EUR/USD؟', options:['سعر الذهب مقابل الدولار','سعر اليورو مقارنة بالدولار الأمريكي','سعر البيتكوين مقابل اليورو'] },
-      ]},
-      risk: { title:'اختبار إدارة رأس المال', questions:[
-        { text:'ما أول قاعدة لحماية رأس المال؟', options:['تحديد نسبة مخاطرة ثابتة للصفقة','رفع الرافعة المالية بعد خسارة','فتح صفقات متعاكسة دائماً'] },
-        { text:'ما الفائدة الأساسية من نسبة العائد إلى المخاطرة 1:2؟', options:['تضاعف حجم العقد تلقائياً','تضمن الربح في كل صفقة','تجعل الربح المحتمل ضعف المخاطرة'] },
-        { text:'متى يجب تحديد حجم الصفقة؟', options:['بعد وصول السعر للهدف','قبل فتح الصفقة وفق وقف الخسارة','بعد مضاعفة الرصيد'] },
-      ]},
-    };
-    let activeQuiz = 'basics';
     const $ = (selector) => document.querySelector(selector);
     const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
     const api = async (url, options = {}) => {
@@ -112,24 +111,29 @@
       if (!response.ok) throw new Error(data?.error || `تعذر إتمام العملية. رمز الخطأ: ${response.status}`);
       return data;
     };
+    
     function showModal(id) { $(`#${id}`).classList.add('open'); }
     function closeModal(id) { $(`#${id}`).classList.remove('open'); }
+    
     function updateAccount() {
       const loggedIn = Boolean(state.user); $('#accountButton').textContent = loggedIn ? `خروج · ${state.user.name}` : 'تسجيل الدخول';
       $('#membershipLabel').textContent = state.user?.isSubscribed ? 'الحالة: عضوية نشطة ✓' : 'الحالة: زائر';
       document.querySelectorAll('.premium-course').forEach(card => card.classList.toggle('unlocked', Boolean(state.user?.isSubscribed || state.user?.role === 'admin')));
     }
     function showNotice(message) { const notice = $('#databaseNotice'); notice.textContent = message; notice.classList.add('show'); }
+    
     async function loadStatus() {
       if (!state.token) return updateAccount();
-      try { const data = await api('/api/user-status'); state.user = data.user; localStorage.setItem('fadilUser', JSON.stringify(data.user)); updateAccount(); loadQuizHistory(); loadManagedCourses(); }
+      try { const data = await api('/api/user-status'); state.user = data.user; localStorage.setItem('fadilUser', JSON.stringify(data.user)); updateAccount(); loadManagedCourses(); loadQuizFiles(); }
       catch (error) { if (error.message.includes('قاعدة البيانات')) showNotice(error.message); else { localStorage.removeItem('fadilToken'); localStorage.removeItem('fadilUser'); state.token = null; state.user = null; updateAccount(); } }
     }
+
     async function loadMessages() {
       if (!state.token) return;
       try { const messages = await api('/api/support/messages'); const log = $('#chatLog'); log.innerHTML = messages.length ? messages.map(m => `<div class="bubble ${m.senderRole === 'admin' ? 'admin':'student'}">${escapeHtml(m.body)}<time>${new Date(m.createdAt).toLocaleString('ar-IQ')}</time></div>`).join('') : '<div class="empty">أهلاً بك، كيف نساعدك اليوم؟</div>'; log.scrollTop = log.scrollHeight; }
       catch (error) { $('#chatLog').innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; }
     }
+
     async function loadNews() {
       const list = $('#newsList');
       try {
@@ -137,13 +141,15 @@
         list.innerHTML = news.length ? news.map(item => `<article class="news-item"><div class="news-meta"><span>${escapeHtml(item.category)}</span><time>${new Date(item.createdAt).toLocaleDateString('ar-IQ')}</time></div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.summary)}</p>${item.sourceUrl ? `<a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noopener noreferrer">قراءة المصدر ←</a>` : ''}</article>`).join('') : '<div class="empty">لا توجد أخبار منشورة حالياً. تابعنا قريباً.</div>';
       } catch (error) { list.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; }
     }
+
     async function loadAnalyses() {
       const container = $('#publishedAnalyses');
       try {
         const analyses = await api('/api/analyses');
-        container.innerHTML = analyses.length ? `<h3 class="managed-title">تحليلات الإدارة</h3>${analyses.map(analysis => `<article class="analysis-card"><div><span class="course-tag">تحليل منشور</span><h3>${escapeHtml(analysis.title)}</h3><p>${escapeHtml(analysis.body || 'تحليل مرفق من فريق FADIL TRADING.')}</p></div>${analysis.attachmentPath ? `<a class="btn btn-outline" href="${escapeHtml(analysis.attachmentPath)}" target="_blank" rel="noopener">فتح المرفق</a>` : ''}</article>`).join('')}` : '';
+        container.innerHTML = analyses.length ? `<h3 class="managed-title">تحليلات الإدارة</h3>${analyses.map(analysis => `<article class="analysis-card"><div><span class="course-tag">تحليل منشور</span><h3>${escapeHtml(analysis.title)}</h3><p>${escapeHtml(analysis.body \vert{}\vert{} 'تحليل مرفق من فريق FADIL TRADING.')}</p></div>${analysis.attachmentPath ? `<a class="btn btn-outline" href="${escapeHtml(analysis.attachmentPath)}" target="_blank" rel="noopener">فتح المرفق</a>` : ''}</article>`).join('')}` : '';
       } catch (_error) { container.innerHTML = ''; }
     }
+
     async function loadManagedCourses() {
       const container = $('#managedCourses');
       if (!state.token) { container.innerHTML = '<div class="empty">سجّل دخولك لعرض الكورسات التي تنشرها الإدارة.</div>'; return; }
@@ -152,46 +158,31 @@
         container.innerHTML = courses.length ? `<h3 class="managed-title">الكورسات المضافة حديثاً</h3><div class="course-grid uploaded-course-grid">${courses.map(course => `<article class="course-card uploaded-course"><div class="course-image"${course.thumbnailPath ? ` style="background-image:url('${escapeHtml(course.thumbnailPath)}')"` : ''}></div><div class="course-content"><span class="course-tag">${escapeHtml(course.category)}</span><h3>${escapeHtml(course.title)}</h3><p>${escapeHtml(course.description || 'محتوى تدريبي من إعداد FADIL TRADING.')}</p></div><button class="course-open" onclick="openManagedCourse('${course._id}')">${state.user?.isSubscribed || state.user?.role === 'admin' ? 'ابدأ الدراسة ←' : 'فعّل العضوية للمتابعة'}</button></article>`).join('')}</div>` : '<div class="empty">لم تضف الإدارة كورسات جديدة بعد.</div>';
       } catch (error) { container.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; }
     }
+
     async function openManagedCourse(courseId) {
       if (!state.token) return showModal('authModal');
       const viewer = $('#courseViewer'); viewer.hidden = false; viewer.innerHTML = '<div class="empty">جارٍ تجهيز محتوى الكورس...</div>'; viewer.scrollIntoView({ behavior:'smooth', block:'center' });
       try {
         await api(`/api/courses/${courseId}/select`, { method:'POST' });
         const data = await api(`/api/courses/${courseId}/content`);
-        viewer.innerHTML = `<div class="panel-title"><div><b>${escapeHtml(data.course.title)}</b><small>${escapeHtml(data.course.description || 'محتوى الكورس')}</small></div></div>${data.lessons.length ? `<div class="lesson-list">${data.lessons.map(lesson => `<article class="lesson-item"><div><b>${escapeHtml(lesson.title)}</b><p>${escapeHtml(lesson.description || '')}</p>${lesson.videoPath ? `<video controls preload="metadata" src="${escapeHtml(lesson.videoPath)}"></video>` : lesson.videoUrl ? `<a class="accent" href="${escapeHtml(lesson.videoUrl)}" target="_blank" rel="noopener">فتح المقطع</a>` : ''}${lesson.attachmentPath ? `<a class="accent" href="${escapeHtml(lesson.attachmentPath)}" target="_blank" rel="noopener">تحميل مرفق الدرس</a>` : ''}</div><button class="btn btn-outline" onclick="completeLesson('${lesson._id}')">تمت المشاهدة</button></article>`).join('')}</div>` : '<div class="empty">لم ترفع الإدارة مقاطع لهذا الكورس بعد.</div>'}${data.resources.length ? `<div class="resource-list"><b>ملفات الكورس</b>${data.resources.map(resource => `<a href="${escapeHtml(resource.filePath)}" target="_blank" rel="noopener">${escapeHtml(resource.title)} ↓</a>`).join('')}</div>` : ''}`;
+        viewer.innerHTML = `<div class="panel-title"><div><b>${escapeHtml(data.course.title)}</b><small>${escapeHtml(data.course.description || 'محتوى الكورس')}</small></div></div>${data.lessons.length ? `<div class="lesson-list">${data.lessons.map(lesson => `<article class="lesson-item"><div><b>${escapeHtml(lesson.title)}</b><p>${escapeHtml(lesson.description || '')}</p>${lesson.videoPath ? `<video controls preload="metadata" src="${escapeHtml(lesson.videoPath)}"></video>` : lesson.videoUrl ? `<a class="accent" href="${escapeHtml(lesson.videoUrl)}" target="_blank" rel="noopener">فتح المقطع</a>` : ''}${lesson.attachmentPath ? `<a class="accent" href="${escapeHtml(lesson.attachmentPath)}" target="_blank" rel="noopener">تحميل مرفق الدرس</a>` : ''}</div><button class="btn btn-outline" onclick="completeLesson('${lesson._id}')">تمت المشاهدة</button></article>`).join('')}</div>` : '<div class="empty">لم ترفع الإدارة مقاطع لهذا الكورس بعد.</div>'}${data.resources.length ? `<div class="resource-list"><b>ملفات الكورس</b>${data.resources.map(resource => `<a href="${escapeHtml(resource.filePath)}" target="_blank" rel="noopener" style="display:block; padding:10px; background:#111; border-radius:8px; margin-top:5px;">${escapeHtml(resource.title)} ↓</a>`).join('')}</div>` : ''}`;
         loadStatus();
       } catch (error) { viewer.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; }
     }
+
     async function completeLesson(lessonId) {
-      try { await api(`/api/lessons/${lessonId}/progress`, { method:'POST', body:JSON.stringify({ status:'completed' }) }); alert('تم تسجيل إكمال الدرس.'); } catch (error) { alert(error.message); }
+      try { await api(`/api/lessons/${lessonId}/progress`, { method:'POST', body:JSON.stringify({ status:'completed' }) }); alert('تم تسجيل إكمال الدرس.'); loadStatus(); } catch (error) { alert(error.message); }
     }
-    function renderQuiz(moduleId) {
-      activeQuiz = moduleId;
-      const quiz = quizContent[moduleId];
-      $('#quizTitle').textContent = quiz.title;
-      $('#quizCounter').textContent = `${quiz.questions.length} أسئلة`;
-      $('#quizFeedback').innerHTML = '';
-      $('#quizForm').innerHTML = quiz.questions.map((question, index) => `<fieldset class="quiz-question"><legend><span>${String(index + 1).padStart(2, '0')}</span>${question.text}</legend><div class="quiz-options">${question.options.map((option, optionIndex) => `<label><input type="radio" name="question-${index}" value="${optionIndex}"><span>${escapeHtml(option)}</span></label>`).join('')}</div></fieldset>`).join('') + '<button class="btn" type="submit">إرسال الإجابات وحفظ النتيجة</button>';
-      document.querySelectorAll('.quiz-module').forEach(button => button.classList.toggle('active', button.dataset.quizModule === moduleId));
-    }
-    async function loadAvailableQuizzes() {
+
+    async function loadQuizFiles() {
+      const container = $('#quizFilesList');
+      if (!state.token) { container.innerHTML = '<div class="empty">سجّل دخولك لعرض ملفات الاختبارات.</div>'; return; }
       try {
-        const available = new Set((await api('/api/quizzes')).map(quiz => quiz.moduleId));
-        const buttons = [...document.querySelectorAll('.quiz-module')];
-        buttons.forEach(button => { button.hidden = !available.has(button.dataset.quizModule); });
-        const firstAvailable = buttons.find(button => !button.hidden);
-        if (firstAvailable && !available.has(activeQuiz)) renderQuiz(firstAvailable.dataset.quizModule);
-        if (!firstAvailable) { $('#quizForm').innerHTML = '<div class="empty">لا توجد اختبارات متاحة حالياً.</div>'; }
-      } catch (_error) { /* Keep the built-in interface visible when the database is temporarily unavailable. */ }
+        const files = await api('/api/quiz-files');
+        container.innerHTML = files.length ? `<div class="resource-list">${files.map(f => `<a href="${escapeHtml(f.filePath)}" target="_blank" rel="noopener" style="display:block; padding:15px; background:#111; border-radius:8px; margin-bottom:10px; font-weight:bold; color:var(--accent); text-decoration:none;">📄 ${escapeHtml(f.title)} ↓</a>`).join('')}</div>` : '<div class="empty">لم ترفع الإدارة ملفات اختبارات حالياً.</div>';
+      } catch (error) { container.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; }
     }
-    async function loadQuizHistory() {
-      const history = $('#quizHistory');
-      if (!state.token) { history.innerHTML = '<div class="empty">سجّل دخولك لإرسال الإجابات وحفظ سجل إنجازك.</div>'; return; }
-      try {
-        const results = await api('/api/quizzes/mine');
-        history.innerHTML = results.length ? `<div class="history-title">آخر محاولاتك</div>${results.slice(0, 4).map(result => `<div class="history-item"><div><b>${escapeHtml(result.moduleTitle)}</b><small>${new Date(result.createdAt).toLocaleString('ar-IQ')}</small></div><strong>${result.score} <small>/ ${result.totalQuestions}</small></strong></div>`).join('')}` : '<div class="empty">لم تُسجّل أي محاولة بعد. ابدأ بالاختبار الأول.</div>';
-      } catch (error) { history.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; }
-    }
+
     function initializeChart() {
       const script = document.createElement('script');
       script.type = 'text/javascript'; script.async = true;
@@ -199,15 +190,16 @@
       script.text = JSON.stringify({ autosize:true, symbol:'BITSTAMP:BTCUSD', interval:'60', timezone:'Etc/UTC', theme:'dark', style:'1', locale:'ar_AE', allow_symbol_change:true, calendar:false, support_host:'https://www.tradingview.com' });
       $('#tradingViewChart').appendChild(script);
     }
-    $('#accountButton').onclick = () => { if (!state.user) showModal('authModal'); else { localStorage.removeItem('fadilToken'); localStorage.removeItem('fadilUser'); state.token = null; state.user = null; updateAccount(); loadQuizHistory(); } };
+
+    $('#accountButton').onclick = () => { if (!state.user) showModal('authModal'); else { localStorage.removeItem('fadilToken'); localStorage.removeItem('fadilUser'); state.token = null; state.user = null; updateAccount(); loadManagedCourses(); loadQuizFiles(); } };
     $('#joinButton').onclick = () => state.user ? showModal('subscriptionModal') : showModal('authModal'); $('#supportButton').onclick = () => { showModal('supportModal'); loadMessages(); };
     document.querySelectorAll('[data-close]').forEach(button => button.onclick = () => closeModal(button.dataset.close));
     $('#authSwitch').onclick = () => { state.register = !state.register; $('#nameInput').style.display = state.register ? 'block':'none'; $('#authTitle').textContent = state.register ? 'إنشاء حساب جديد':'تسجيل الدخول'; $('#authSubmit').textContent = state.register ? 'إنشاء الحساب':'دخول'; $('#authSwitch').textContent = state.register ? 'لديك حساب بالفعل؟ سجّل الدخول':'ليس لديك حساب؟ أنشئ حساباً'; };
-    $('#authForm').onsubmit = async (event) => { event.preventDefault(); try { const payload = { email:$('#emailInput').value, password:$('#passwordInput').value }; if (state.register) payload.name = $('#nameInput').value; const data = await api(`/api/auth/${state.register ? 'register':'login'}`, { method:'POST', body:JSON.stringify(payload) }); state.token=data.token; state.user=data.user; localStorage.setItem('fadilToken',state.token); localStorage.setItem('fadilUser',JSON.stringify(state.user)); closeModal('authModal'); updateAccount(); loadQuizHistory(); loadManagedCourses(); } catch(error) { alert(error.message); } };
+    
+    $('#authForm').onsubmit = async (event) => { event.preventDefault(); try { const payload = { email:$('#emailInput').value, password:$('#passwordInput').value }; if (state.register) payload.name = $('#nameInput').value; const data = await api(`/api/auth/${state.register ? 'register':'login'}`, { method:'POST', body:JSON.stringify(payload) }); state.token=data.token; state.user=data.user; localStorage.setItem('fadilToken',state.token); localStorage.setItem('fadilUser',JSON.stringify(state.user)); closeModal('authModal'); updateAccount(); loadManagedCourses(); loadQuizFiles(); } catch(error) { alert(error.message); } };
     $('#chatForm').onsubmit = async (event) => { event.preventDefault(); const input = $('#chatInput'); if (!state.token) return showModal('authModal'); if (!input.value.trim()) return; try { await api('/api/support/messages',{method:'POST',body:JSON.stringify({body:input.value})}); input.value=''; loadMessages(); } catch(error) { alert(error.message); } };
     $('#subscriptionForm').onsubmit = async (event) => { event.preventDefault(); if (!state.token) return showModal('authModal'); const form = new FormData(); form.append('plan', 'monthly'); form.append('note', $('#subscriptionNote').value); form.append('paymentProof', $('#proofInput').files[0]); try { await api('/api/subscriptions', { method:'POST', body:form }); closeModal('subscriptionModal'); event.target.reset(); alert('تم إرسال طلبك بنجاح. ستُفتح الدروس فور اعتماده من الإدارة.'); } catch (error) { alert(error.message); } };
-    document.querySelectorAll('.quiz-module').forEach(button => button.onclick = () => renderQuiz(button.dataset.quizModule));
-    $('#quizForm').onsubmit = async (event) => { event.preventDefault(); if (!state.token) return showModal('authModal'); const quiz = quizContent[activeQuiz]; const answers = quiz.questions.map((_, index) => { const selected = document.querySelector(`input[name="question-${index}"]:checked`); return selected ? Number(selected.value) : null; }); if (answers.includes(null)) { $('#quizFeedback').innerHTML = '<span class="error-text">يرجى اختيار إجابة لكل الأسئلة أولاً.</span>'; return; } try { const data = await api('/api/quizzes/submit', { method:'POST', body:JSON.stringify({ moduleId:activeQuiz, answers }) }); if (!data?.result) throw new Error('لم تصل نتيجة الاختبار من الخادم.'); $('#quizFeedback').innerHTML = `<span class="success-text">تم الحفظ — نتيجتك: ${data.result.score} من ${data.result.totalQuestions}</span>`; loadQuizHistory(); } catch (error) { $('#quizFeedback').innerHTML = `<span class="error-text">${escapeHtml(error.message)}</span>`; } };
-    $('#year').textContent = new Date().getFullYear(); renderQuiz(activeQuiz); updateAccount(); loadStatus(); loadNews(); loadAnalyses(); loadAvailableQuizzes(); loadQuizHistory(); loadManagedCourses(); initializeChart();
+    
+    $('#year').textContent = new Date().getFullYear(); updateAccount(); loadStatus(); loadNews(); loadAnalyses(); loadManagedCourses(); loadQuizFiles(); initializeChart();
   </script>
 </body></html>
