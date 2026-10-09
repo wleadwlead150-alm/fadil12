@@ -220,13 +220,11 @@ async function ensureFreeCourse() {
 // ----------------------------------------------------
 // Middlewares
 // ----------------------------------------------------
-// التعديل 1: السماح بالانتظار أو محاولة الاتصال إذا تأخرت الاستجابة
 async function databaseRequired(_req, res, next) {
   if (mongoose.connection.readyState !== 1) {
-    // محاولة اتصال سريعة أخيرة قبل الرفض
     try {
-      const safeMongoUri = process.env.MONGO_URI || "mongodb+srv://wleadwlead150_db_user:j3U18ZpQG8EYOWdo@fadil.wc6wbvu.mongodb.net/?appName=Fadil";
-      await mongoose.connect(safeMongoUri, { serverSelectionTimeoutMS: 5000 });
+      const DIRECT_MONGO_URI = "mongodb+srv://wleadwlead150_db_user:j3U18ZpQG8EYOWdo@fadil.wc6wbvu.mongodb.net/?appName=Fadil";
+      await mongoose.connect(DIRECT_MONGO_URI, { serverSelectionTimeoutMS: 5000 });
     } catch (e) {
       return res.status(503).json({ error: 'قاعدة البيانات غير متصلة. يرجى الانتظار قليلاً أو تحديث الصفحة.' });
     }
@@ -612,20 +610,18 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: err.message || 'حدث خطأ غير متوقع.' });
 });
 
-// التعديل 2: الاتصال الآمن واستخدام process.env لمنع Railway من التأخير
 async function startServer() {
   try {
-    // الأولوية دائماً لـ process.env ثم الرابط المباشر
-    const safeMongoUri = process.env.MONGO_URI || "mongodb+srv://wleadwlead150_db_user:j3U18ZpQG8EYOWdo@fadil.wc6wbvu.mongodb.net/?appName=Fadil";
+    const DIRECT_MONGO_URI = "mongodb+srv://wleadwlead150_db_user:j3U18ZpQG8EYOWdo@fadil.wc6wbvu.mongodb.net/?appName=Fadil";
     
-    mongoose.connect(safeMongoUri, { serverSelectionTimeoutMS: 30000 })
+    mongoose.connect(DIRECT_MONGO_URI, { serverSelectionTimeoutMS: 30000 })
       .then(async () => {
-        console.log('✓ MongoDB connected');
+        console.log('✓ MongoDB connected successfully');
         await seedDefaultAdmin();
         await ensureFreeCourse();
       })
       .catch(err => {
-        console.error('⚠ MongoDB Connection Error (Continuing without crash):', err.message);
+        console.error('⚠ MongoDB Connection Error:', err.message);
       });
 
   } catch (error) {
