@@ -6,7 +6,7 @@ const path = require('path');
 const { promisify } = require('util');
 const cors = require('cors');
 const express = require('express');
-const mongoose = require('mongoose');
+const { Pool } = require('pg');
 const multer = require('multer');
 
 const app = express();
@@ -24,110 +24,138 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(uploadsDirectory));
 
 // ----------------------------------------------------
-// Mongoose Schemas (نماذج قاعدة البيانات)
+// إعداد اتصال قاعدة بيانات PostgreSQL
 // ----------------------------------------------------
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true, maxlength: 80 },
-  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-  passwordHash: { type: String, required: true, select: false },
-  role: { type: String, enum: ['student', 'admin'], default: 'student' },
-  isSubscribed: { type: Boolean, default: false },
-  activatedAt: Date,
-  currentCourseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', default: null },
-  authToken: { type: String, select: false },
-}, { timestamps: true });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || process.env.PG_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
-const courseSchema = new mongoose.Schema({
-  title: { type: String, required: true, trim: true, maxlength: 160 },
-  description: { type: String, default: '', maxlength: 1500 },
-  category: { type: String, default: 'general', trim: true, maxlength: 80 },
-  thumbnailPath: { type: String, default: '' },
-  attachmentPath: { type: String, default: '' },
-  isPublished: { type: Boolean, default: true },
-  isFree: { type: Boolean, default: false },
-}, { timestamps: true });
+async function query(text, params) {
+  const client = await pool.connect();
+  try {
+    return await client.query(text, params);
+  } finally {
+    client.release();
+  }
+}
 
-const lessonSchema = new mongoose.Schema({
-  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', default: null },
-  title: { type: String, required: true, trim: true },
-  description: { type: String, default: '' },
-  category: { type: String, default: 'general' },
-  videoUrl: { type: String, default: '' },
-  videoPath: { type: String, default: '' },
-  attachmentPath: { type: String, default: '' },
-  durationSeconds: { type: Number, default: 0, min: 0 },
-  isPublished: { type: Boolean, default: true },
-}, { timestamps: true });
+// إنشاء الجداول الأساسية تلقائياً عند بدء التشغيل
+async function initDatabase() {
+  await query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(80) NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      role VARCHAR(20) DEFAULT 'student',
+      is_subscribed BOOLEAN DEFAULT FALSE,
+      activated_at TIMESTAMP,
+      current_course_id INTEGER,
+      auth_token TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
 
-const resourceSchema = new mongoose.Schema({
-  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', default: null },
-  lessonId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lesson', default: null },
-  title: { type: String, required: true, trim: true, maxlength: 160 },
-  filePath: { type: String, required: true },
-  originalName: { type: String, default: '' },
-  mimeType: { type: String, default: '' },
-  size: { type: Number, default: 0 },
-}, { timestamps: true });
+    CREATE TABLE IF NOT EXISTS courses (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(160) NOT NULL,
+      description TEXT DEFAULT '',
+      category VARCHAR(80) DEFAULT 'general',
+      thumbnail_path TEXT DEFAULT '',
+      attachment_path TEXT DEFAULT '',
+      is_published BOOLEAN DEFAULT TRUE,
+      is_free BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
 
-const quizFileSchema = new mongoose.Schema({
-  title: { type: String, required: true, trim: true, maxlength: 160 },
-  filePath: { type: String, required: true },
-  originalName: { type: String, default: '' },
-  mimeType: { type: String, default: '' },
-  size: { type: Number, default: 0 },
-}, { timestamps: true });
+    CREATE TABLE IF NOT EXISTS lessons (
+      id SERIAL PRIMARY KEY,
+      course_id INTEGER REFERENCES courses(id) ON DELETE SET NULL,
+      title TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      category TEXT DEFAULT 'general',
+      video_url TEXT DEFAULT '',
+      video_path TEXT DEFAULT '',
+      attachment_path TEXT DEFAULT '',
+      duration_seconds INTEGER DEFAULT 0,
+      is_published BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
 
-const progressSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', default: null },
-  lessonId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lesson', required: true },
-  status: { type: String, enum: ['started', 'completed'], default: 'started' },
-  watchedSeconds: { type: Number, default: 0, min: 0 },
-  completedAt: Date,
-}, { timestamps: true });
-progressSchema.index({ userId: 1, lessonId: 1 }, { unique: true });
+    CREATE TABLE IF NOT EXISTS resources (
+      id SERIAL PRIMARY KEY,
+      course_id INTEGER REFERENCES courses(id) ON DELETE SET NULL,
+      lesson_id INTEGER REFERENCES lessons(id) ON DELETE SET NULL,
+      title VARCHAR(160) NOT NULL,
+      file_path TEXT NOT NULL,
+      original_name TEXT DEFAULT '',
+      mime_type TEXT DEFAULT '',
+      size BIGINT DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
 
-const subscriptionSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  plan: { type: String, enum: ['monthly', 'quarterly', 'annual'], default: 'monthly' },
-  paymentProof: { type: String, default: '' },
-  note: { type: String, default: '', maxlength: 500 },
-  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
-  reviewedAt: Date,
-}, { timestamps: true });
+    CREATE TABLE IF NOT EXISTS quiz_files (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(160) NOT NULL,
+      file_path TEXT NOT NULL,
+      original_name TEXT DEFAULT '',
+      mime_type TEXT DEFAULT '',
+      size BIGINT DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
 
-const messageSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  senderRole: { type: String, enum: ['student', 'admin'], required: true },
-  body: { type: String, required: true, trim: true, maxlength: 1500 },
-  isRead: { type: Boolean, default: false },
-}, { timestamps: true });
+    CREATE TABLE IF NOT EXISTS progress (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      course_id INTEGER REFERENCES courses(id) ON DELETE SET NULL,
+      lesson_id INTEGER REFERENCES lessons(id) ON DELETE CASCADE,
+      status VARCHAR(20) DEFAULT 'started',
+      watched_seconds INTEGER DEFAULT 0,
+      completed_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT unique_user_lesson UNIQUE(user_id, lesson_id)
+    );
 
-const newsSchema = new mongoose.Schema({
-  title: { type: String, required: true, trim: true, maxlength: 160 },
-  summary: { type: String, required: true, trim: true, maxlength: 900 },
-  category: { type: String, trim: true, maxlength: 50, default: 'تحديث السوق' },
-  sourceUrl: { type: String, trim: true, maxlength: 500, default: '' },
-  isPublished: { type: Boolean, default: true },
-}, { timestamps: true });
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      plan VARCHAR(20) DEFAULT 'monthly',
+      payment_proof TEXT DEFAULT '',
+      note TEXT DEFAULT '',
+      status VARCHAR(20) DEFAULT 'pending',
+      reviewed_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
 
-const analysisSchema = new mongoose.Schema({
-  title: { type: String, required: true, trim: true, maxlength: 160 },
-  body: { type: String, default: '', maxlength: 5000 },
-  attachmentPath: { type: String, default: '' },
-  isPublished: { type: Boolean, default: true },
-}, { timestamps: true });
+    CREATE TABLE IF NOT EXISTS messages (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      sender_role VARCHAR(20) NOT NULL,
+      body TEXT NOT NULL,
+      is_read BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
 
-const User = mongoose.model('User', userSchema);
-const Course = mongoose.model('Course', courseSchema);
-const Lesson = mongoose.model('Lesson', lessonSchema);
-const Resource = mongoose.model('Resource', resourceSchema);
-const QuizFile = mongoose.model('QuizFile', quizFileSchema);
-const Progress = mongoose.model('Progress', progressSchema);
-const Subscription = mongoose.model('Subscription', subscriptionSchema);
-const Message = mongoose.model('Message', messageSchema);
-const News = mongoose.model('News', newsSchema);
-const Analysis = mongoose.model('Analysis', analysisSchema);
+    CREATE TABLE IF NOT EXISTS news (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(160) NOT NULL,
+      summary TEXT NOT NULL,
+      category VARCHAR(50) DEFAULT 'تحديث السوق',
+      source_url TEXT DEFAULT '',
+      is_published BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS analyses (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(160) NOT NULL,
+      body TEXT DEFAULT '',
+      attachment_path TEXT DEFAULT '',
+      is_published BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+}
 
 // ----------------------------------------------------
 // إعدادات الرفع (Multer)
@@ -153,7 +181,7 @@ const contentUpload = multer({
     const extension = path.extname(file.originalname).toLowerCase();
     const allowedExtensions = new Set(['.mp4', '.webm', '.mov', '.m4v', '.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.zip', '.rar', '.jpg', '.jpeg', '.png', '.webp', '.json']);
     if (!allowedExtensions.has(extension)) { 
-      const error = new Error('نوع الملف غير مدعوم. يسمح بالفيديوهات وملفات PDF/Office والصور والملفات المضغوطة.'); 
+      const error = new Error('نوع الملف غير مدعوم.'); 
       error.status = 400; 
       return callback(error); 
     }
@@ -162,10 +190,10 @@ const contentUpload = multer({
 });
 
 // ----------------------------------------------------
-// Functions مساعدة
+// دوال المساعدة
 // ----------------------------------------------------
 function publicUser(user) {
-  return { id: user._id, name: user.name, email: user.email, role: user.role, isSubscribed: user.isSubscribed, activatedAt: user.activatedAt, currentCourseId: user.currentCourseId };
+  return { id: user.id, name: user.name, email: user.email, role: user.role, isSubscribed: user.is_subscribed, activatedAt: user.activated_at, currentCourseId: user.current_course_id };
 }
 
 async function hashPassword(password) {
@@ -193,26 +221,27 @@ async function removeUploadedFile(publicPath) {
 }
 
 async function seedDefaultAdmin() {
-  const existing = await User.findOne({ email: ADMIN_EMAIL }).select('+passwordHash');
-  if (!existing) {
-    await User.create({ name: 'FADIL Administrator', email: ADMIN_EMAIL, passwordHash: await hashPassword(DEFAULT_ADMIN_PASSWORD), role: 'admin', isSubscribed: true, activatedAt: new Date() });
+  const res = await query('SELECT * FROM users WHERE email = $1', [ADMIN_EMAIL]);
+  if (res.rows.length === 0) {
+    const passwordHash = await hashPassword(DEFAULT_ADMIN_PASSWORD);
+    await query(
+      `INSERT INTO users (name, email, password_hash, role, is_subscribed, activated_at) VALUES ($1, $2, $3, 'admin', TRUE, CURRENT_TIMESTAMP)`,
+      ['FADIL Administrator', ADMIN_EMAIL, passwordHash]
+    );
     console.log(`✓ Default admin created: ${ADMIN_EMAIL}`);
-  } else if (existing.role !== 'admin') {
-    existing.role = 'admin'; existing.isSubscribed = true; await existing.save();
+  } else if (res.rows[0].role !== 'admin') {
+    await query(`UPDATE users SET role = 'admin', is_subscribed = TRUE WHERE email = $1`, [ADMIN_EMAIL]);
     console.log(`✓ Existing account promoted to admin: ${ADMIN_EMAIL}`);
   }
 }
 
 async function ensureFreeCourse() {
-  const freeCourse = await Course.findOne({ isFree: true });
-  if (!freeCourse) {
-    await Course.create({
-      title: 'كورس مجاني',
-      description: 'مدخل مجاني لتعلّم أساسيات التداول وإدارة المخاطر.',
-      category: 'general',
-      isPublished: true,
-      isFree: true
-    });
+  const res = await query('SELECT * FROM courses WHERE is_free = TRUE LIMIT 1');
+  if (res.rows.length === 0) {
+    await query(
+      `INSERT INTO courses (title, description, category, is_published, is_free) VALUES ($1, $2, $3, $4, $5)`,
+      ['كورس مجاني', 'مدخل مجاني لتعلّم أساسيات التداول وإدارة المخاطر.', 'general', true, true]
+    );
     console.log('✓ Free course created');
   }
 }
@@ -220,25 +249,13 @@ async function ensureFreeCourse() {
 // ----------------------------------------------------
 // Middlewares
 // ----------------------------------------------------
-async function databaseRequired(_req, res, next) {
-  if (mongoose.connection.readyState !== 1) {
-    try {
-      const MONGO_URI = process.env.MONGO_URL || process.env.DATABASE_URL || "mongodb+srv://wleadwlead150_db_user:j3U18ZpQG8EYOWdo@fadil.wc6wbvu.mongodb.net/?appName=Fadil";
-      await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 5000 });
-    } catch (e) {
-      return res.status(503).json({ error: 'قاعدة البيانات غير متصلة. يرجى الانتظار قليلاً أو تحديث الصفحة.' });
-    }
-  }
-  next();
-}
-
 async function requireAuth(req, res, next) {
   try {
     const token = req.get('Authorization')?.replace(/^Bearer\s+/i, '');
     if (!token) return res.status(401).json({ error: 'سجّل الدخول أولاً.' });
-    const user = await User.findOne({ authToken: token });
-    if (!user) return res.status(401).json({ error: 'انتهت الجلسة. سجّل الدخول مرة أخرى.' });
-    req.user = user;
+    const resUser = await query('SELECT * FROM users WHERE auth_token = $1', [token]);
+    if (resUser.rows.length === 0) return res.status(401).json({ error: 'انتهت الجلسة. سجّل الدخول مرة أخرى.' });
+    req.user = resUser.rows[0];
     next();
   } catch (error) { next(error); }
 }
@@ -251,358 +268,409 @@ function requireAdmin(req, res, next) {
 // ----------------------------------------------------
 // API Routes
 // ----------------------------------------------------
-app.get('/api/health', (_req, res) => res.json({ ok: true, database: mongoose.connection.readyState === 1 ? 'connected' : 'not-configured' }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, database: 'postgresql-connected' }));
 
-app.post('/api/auth/register', databaseRequired, async (req, res, next) => {
+app.post('/api/auth/register', async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
     if (!name?.trim() || !email?.trim() || typeof password !== 'string' || password.length < 8) {
       return res.status(400).json({ error: 'أدخل الاسم والبريد وكلمة مرور من 8 أحرف على الأقل.' });
     }
     const normalizedEmail = email.trim().toLowerCase();
-    if (await User.exists({ email: normalizedEmail })) return res.status(409).json({ error: 'هذا البريد مسجّل مسبقاً.' });
+    const checkUser = await query('SELECT id FROM users WHERE email = $1', [normalizedEmail]);
+    if (checkUser.rows.length > 0) return res.status(409).json({ error: 'هذا البريد مسجّل مسبقاً.' });
     
-    const freeCourse = await Course.findOne({ isFree: true });
+    const freeCourseRes = await query('SELECT id FROM courses WHERE is_free = TRUE LIMIT 1');
+    const freeCourseId = freeCourseRes.rows.length > 0 ? freeCourseRes.rows[0].id : null;
     
-    const user = await User.create({
-      name: name.trim(), email: normalizedEmail, passwordHash: await hashPassword(password),
-      role: ADMIN_EMAIL && normalizedEmail === ADMIN_EMAIL ? 'admin' : 'student',
-      authToken: crypto.randomBytes(32).toString('hex'),
-      currentCourseId: freeCourse ? freeCourse._id : null
-    });
-    res.status(201).json({ token: user.authToken, user: publicUser(user) });
+    const passwordHash = await hashPassword(password);
+    const authToken = crypto.randomBytes(32).toString('hex');
+    const role = ADMIN_EMAIL && normalizedEmail === ADMIN_EMAIL ? 'admin' : 'student';
+
+    const newUserRes = await query(
+      `INSERT INTO users (name, email, password_hash, role, auth_token, is_subscribed, current_course_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [name.trim(), normalizedEmail, passwordHash, role, authToken, role === 'admin', freeCourseId]
+    );
+    res.status(201).json({ token: authToken, user: publicUser(newUserRes.rows[0]) });
   } catch (error) { next(error); }
 });
 
-app.post('/api/auth/login', databaseRequired, async (req, res, next) => {
+app.post('/api/auth/login', async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const identifier = email?.trim().toLowerCase();
-    const user = await User.findOne({ email: identifier === 'admin' ? ADMIN_EMAIL : identifier }).select('+passwordHash +authToken');
-    if (!user || !(await passwordMatches(password || '', user.passwordHash))) return res.status(401).json({ error: 'البريد أو كلمة المرور غير صحيحين.' });
-    user.authToken = crypto.randomBytes(32).toString('hex');
-    await user.save();
-    res.json({ token: user.authToken, user: publicUser(user) });
+    const targetEmail = identifier === 'admin' ? ADMIN_EMAIL : identifier;
+    
+    const resUser = await query('SELECT * FROM users WHERE email = $1', [targetEmail]);
+    if (resUser.rows.length === 0 || !(await passwordMatches(password || '', resUser.rows[0].password_hash))) {
+      return res.status(401).json({ error: 'البريد أو كلمة المرور غير صحيحين.' });
+    }
+    
+    const authToken = crypto.randomBytes(32).toString('hex');
+    await query('UPDATE users SET auth_token = $1 WHERE id = $2', [authToken, resUser.rows[0].id]);
+    
+    const user = resUser.rows[0];
+    user.auth_token = authToken;
+    res.json({ token: authToken, user: publicUser(user) });
   } catch (error) { next(error); }
 });
 
-app.post('/api/auth/logout', databaseRequired, requireAuth, async (req, res, next) => {
-  try { req.user.authToken = undefined; await req.user.save(); res.status(204).end(); } catch (error) { next(error); }
+app.post('/api/auth/logout', requireAuth, async (req, res, next) => {
+  try { 
+    await query('UPDATE users SET auth_token = NULL WHERE id = $1', [req.user.id]); 
+    res.status(204).end(); 
+  } catch (error) { next(error); }
 });
 
-app.get('/api/user-status', databaseRequired, requireAuth, (req, res) => res.json({ user: publicUser(req.user) }));
+app.get('/api/user-status', requireAuth, (req, res) => res.json({ user: publicUser(req.user) }));
 
-app.get('/api/news', databaseRequired, async (_req, res, next) => {
-  try { res.json(await News.find({ isPublished: true }).sort({ createdAt: -1 }).limit(12)); } catch (error) { next(error); }
+app.get('/api/news', async (_req, res, next) => {
+  try { 
+    const result = await query('SELECT * FROM news WHERE is_published = TRUE ORDER BY created_at DESC LIMIT 12'); 
+    res.json(result.rows); 
+  } catch (error) { next(error); }
 });
 
-app.get('/api/analyses', databaseRequired, async (_req, res, next) => {
-  try { res.json(await Analysis.find({ isPublished: true }).sort({ createdAt: -1 }).limit(12)); } catch (error) { next(error); }
+app.get('/api/analyses', async (_req, res, next) => {
+  try { 
+    const result = await query('SELECT * FROM analyses WHERE is_published = TRUE ORDER BY created_at DESC LIMIT 12'); 
+    res.json(result.rows); 
+  } catch (error) { next(error); }
 });
 
-app.get('/api/quiz-files', databaseRequired, requireAuth, async (req, res, next) => {
+app.get('/api/quiz-files', requireAuth, async (req, res, next) => {
   try {
-    if (!req.user.isSubscribed && req.user.role !== 'admin') {
+    if (!req.user.is_subscribed && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'الاختبارات متاحة للعضوية النشطة فقط.' });
     }
-    const quizFiles = await QuizFile.find().sort({ createdAt: -1 });
-    res.json(quizFiles);
+    const result = await query('SELECT * FROM quiz_files ORDER BY created_at DESC');
+    res.json(result.rows);
   } catch (error) { next(error); }
 });
 
-app.get('/api/courses', databaseRequired, requireAuth, async (req, res, next) => {
-  try { res.json(await Course.find({ isPublished: true }).sort({ createdAt: -1 })); } catch (error) { next(error); }
+app.get('/api/courses', requireAuth, async (_req, res, next) => {
+  try { 
+    const result = await query('SELECT * FROM courses WHERE is_published = TRUE ORDER BY created_at DESC'); 
+    res.json(result.rows); 
+  } catch (error) { next(error); }
 });
 
-app.get('/api/courses/:id/content', databaseRequired, requireAuth, async (req, res, next) => {
+app.get('/api/courses/:id/content', requireAuth, async (req, res, next) => {
   try {
-    const course = await Course.findById(req.params.id);
-    if (!course || !course.isPublished) return res.status(404).json({ error: 'الكورس غير موجود.' });
+    const courseRes = await query('SELECT * FROM courses WHERE id = $1', [req.params.id]);
+    if (courseRes.rows.length === 0 || !courseRes.rows[0].is_published) {
+      return res.status(404).json({ error: 'الكورس غير موجود.' });
+    }
+    const course = courseRes.rows[0];
     
-    if (!req.user.isSubscribed && req.user.role !== 'admin' && !course.isFree) {
+    if (!req.user.is_subscribed && req.user.role !== 'admin' && !course.is_free) {
       return res.status(403).json({ error: 'المحتوى متاح للعضوية النشطة فقط. أرسل طلب اشتراكك الآن.' });
     }
     
-    const [lessons, resources] = await Promise.all([
-      Lesson.find({ courseId: req.params.id, isPublished: true }).sort({ createdAt: 1 }), 
-      Resource.find({ courseId: req.params.id }).sort({ createdAt: -1 })
+    const [lessonsRes, resourcesRes] = await Promise.all([
+      query('SELECT * FROM lessons WHERE course_id = $1 AND is_published = TRUE ORDER BY created_at ASC', [req.params.id]), 
+      query('SELECT * FROM resources WHERE course_id = $1 ORDER BY created_at DESC', [req.params.id])
     ]);
     
-    res.json({ course, lessons, resources });
+    res.json({ course, lessons: lessonsRes.rows, resources: resourcesRes.rows });
   } catch (error) { next(error); }
 });
 
-app.post('/api/courses/:id/select', databaseRequired, requireAuth, async (req, res, next) => {
+app.post('/api/courses/:id/select', requireAuth, async (req, res, next) => {
   try {
-    const course = await Course.findOne({ _id: req.params.id, isPublished: true });
-    if (!course) return res.status(404).json({ error: 'الكورس غير موجود.' });
+    const courseRes = await query('SELECT * FROM courses WHERE id = $1 AND is_published = TRUE', [req.params.id]);
+    if (courseRes.rows.length === 0) return res.status(404).json({ error: 'الكورس غير موجود.' });
+    const course = courseRes.rows[0];
     
-    if (!req.user.isSubscribed && req.user.role !== 'admin' && !course.isFree) {
+    if (!req.user.is_subscribed && req.user.role !== 'admin' && !course.is_free) {
        return res.status(403).json({ error: 'اختر الكورس بعد تفعيل عضويتك.' });
     }
     
-    await User.findByIdAndUpdate(req.user._id, { currentCourseId: course._id });
+    await query('UPDATE users SET current_course_id = $1 WHERE id = $2', [course.id, req.user.id]);
     res.json({ course });
   } catch (error) { next(error); }
 });
 
-app.get('/api/lessons', databaseRequired, requireAuth, async (req, res, next) => {
+app.get('/api/lessons', requireAuth, async (req, res, next) => {
   try {
-    const lessons = await Lesson.find({ isPublished: true }).sort({ createdAt: -1 });
-    res.json({ unlocked: req.user.isSubscribed || req.user.role === 'admin', lessons });
+    const result = await query('SELECT * FROM lessons WHERE is_published = TRUE ORDER BY created_at DESC');
+    res.json({ unlocked: req.user.is_subscribed || req.user.role === 'admin', lessons: result.rows });
   } catch (error) { next(error); }
 });
 
-app.post('/api/lessons/:id/progress', databaseRequired, requireAuth, async (req, res, next) => {
+app.post('/api/lessons/:id/progress', requireAuth, async (req, res, next) => {
   try {
-    const lesson = await Lesson.findById(req.params.id);
-    if (!lesson) return res.status(404).json({ error: 'الدرس غير موجود.' });
+    const lessonRes = await query('SELECT * FROM lessons WHERE id = $1', [req.params.id]);
+    if (lessonRes.rows.length === 0) return res.status(404).json({ error: 'الدرس غير موجود.' });
+    const lesson = lessonRes.rows[0];
+    
     const status = req.body.status === 'completed' ? 'completed' : 'started';
     const watchedSeconds = Number(req.body.watchedSeconds || 0);
-    const progress = await Progress.findOneAndUpdate(
-      { userId: req.user._id, lessonId: lesson._id },
-      { courseId: lesson.courseId, status, watchedSeconds: Number.isFinite(watchedSeconds) ? Math.max(0, watchedSeconds) : 0, ...(status === 'completed' ? { completedAt: new Date() } : {}) },
-      { upsert: true, new: true, setDefaultsOnInsert: true },
+    const validWatched = Number.isFinite(watchedSeconds) ? Math.max(0, watchedSeconds) : 0;
+    const completedAt = status === 'completed' ? new Date() : null;
+
+    const progressRes = await query(
+      `INSERT INTO progress (user_id, course_id, lesson_id, status, watched_seconds, completed_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (user_id, lesson_id) 
+       DO UPDATE SET status = EXCLUDED.status, watched_seconds = EXCLUDED.watched_seconds, completed_at = EXCLUDED.completed_at
+       RETURNING *`,
+      [req.user.id, lesson.course_id, lesson.id, status, validWatched, completedAt]
     );
-    res.json({ progress });
+    res.json({ progress: progressRes.rows[0] });
   } catch (error) { next(error); }
 });
 
-app.post('/api/subscriptions', databaseRequired, requireAuth, paymentUpload.single('paymentProof'), async (req, res, next) => {
+app.post('/api/subscriptions', requireAuth, paymentUpload.single('paymentProof'), async (req, res, next) => {
   try {
-    const subscription = await Subscription.create({
-      userId: req.user._id, plan: req.body.plan || 'monthly', note: req.body.note || '',
-      paymentProof: req.file ? `/uploads/${req.file.filename}` : '',
-    });
-    res.status(201).json({ subscription });
+    const subRes = await query(
+      `INSERT INTO subscriptions (user_id, plan, payment_proof, note, status) VALUES ($1, $2, $3, $4, 'pending') RETURNING *`,
+      [req.user.id, req.body.plan || 'monthly', req.file ? `/uploads/${req.file.filename}` : '', req.body.note || '']
+    );
+    res.status(201).json({ subscription: subRes.rows[0] });
   } catch (error) { next(error); }
 });
 
-app.get('/api/subscriptions/mine', databaseRequired, requireAuth, async (req, res, next) => {
-  try { res.json(await Subscription.find({ userId: req.user._id }).sort({ createdAt: -1 })); } catch (error) { next(error); }
+app.get('/api/subscriptions/mine', requireAuth, async (req, res, next) => {
+  try { 
+    const result = await query('SELECT * FROM subscriptions WHERE user_id = $1 ORDER BY created_at DESC', [req.user.id]);
+    res.json(result.rows); 
+  } catch (error) { next(error); }
 });
 
-app.post('/api/support/messages', databaseRequired, requireAuth, async (req, res, next) => {
+app.post('/api/support/messages', requireAuth, async (req, res, next) => {
   try {
     if (!req.body.body?.trim()) return res.status(400).json({ error: 'لا يمكن إرسال رسالة فارغة.' });
-    const message = await Message.create({ userId: req.user._id, senderRole: 'student', body: req.body.body.trim() });
-    res.status(201).json(message);
+    const msgRes = await query(
+      `INSERT INTO messages (user_id, sender_role, body) VALUES ($1, 'student', $2) RETURNING *`,
+      [req.user.id, req.body.body.trim()]
+    );
+    res.status(201).json(msgRes.rows[0]);
   } catch (error) { next(error); }
 });
 
-app.get('/api/support/messages', databaseRequired, requireAuth, async (req, res, next) => {
+app.get('/api/support/messages', requireAuth, async (req, res, next) => {
   try {
-    const messages = await Message.find({ userId: req.user._id }).sort({ createdAt: 1 });
-    await Message.updateMany({ userId: req.user._id, senderRole: 'admin', isRead: false }, { isRead: true });
-    res.json(messages);
+    const result = await query('SELECT * FROM messages WHERE user_id = $1 ORDER BY created_at ASC', [req.user.id]);
+    await query('UPDATE messages SET is_read = TRUE WHERE user_id = $1 AND sender_role = $2 AND is_read = FALSE', [req.user.id, 'admin']);
+    res.json(result.rows);
   } catch (error) { next(error); }
 });
 
-app.get('/api/admin/tickets', databaseRequired, requireAuth, requireAdmin, async (_req, res, next) => {
+// مسارات الإدارة (Admin Routes)
+app.get('/api/admin/tickets', requireAuth, requireAdmin, async (_req, res, next) => {
   try {
-    const messages = await Message.find().sort({ createdAt: -1 }).populate('userId', 'name email');
-    const tickets = [];
-    const seen = new Set();
-    for (const message of messages) {
-      if (!seen.has(String(message.userId._id))) { tickets.push({ user: message.userId, lastMessage: message }); seen.add(String(message.userId._id)); }
-    }
-    res.json(tickets);
+    const result = await query(`
+      SELECT DISTINCT ON (m.user_id) m.*, u.name as user_name, u.email as user_email 
+      FROM messages m 
+      JOIN users u ON m.user_id = u.id 
+      ORDER BY m.user_id, m.created_at DESC
+    `);
+    res.json(result.rows.map(row => ({
+      user: { _id: row.user_id, id: row.user_id, name: row.user_name, email: row.user_email },
+      lastMessage: row
+    })));
   } catch (error) { next(error); }
 });
 
-app.get('/api/admin/tickets/:userId', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
-  try { res.json(await Message.find({ userId: req.params.userId }).sort({ createdAt: 1 })); } catch (error) { next(error); }
+app.get('/api/admin/tickets/:userId', requireAuth, requireAdmin, async (req, res, next) => {
+  try { 
+    const result = await query('SELECT * FROM messages WHERE user_id = $1 ORDER BY created_at ASC', [req.params.userId]);
+    res.json(result.rows); 
+  } catch (error) { next(error); }
 });
 
-app.post('/api/admin/tickets/:userId/reply', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
+app.post('/api/admin/tickets/:userId/reply', requireAuth, requireAdmin, async (req, res, next) => {
   try {
     if (!req.body.body?.trim()) return res.status(400).json({ error: 'اكتب الرد أولاً.' });
-    const message = await Message.create({ userId: req.params.userId, senderRole: 'admin', body: req.body.body.trim() });
-    res.status(201).json(message);
+    const msgRes = await query(
+      `INSERT INTO messages (user_id, sender_role, body) VALUES ($1, 'admin', $2) RETURNING *`,
+      [req.params.userId, req.body.body.trim()]
+    );
+    res.status(201).json(msgRes.rows[0]);
   } catch (error) { next(error); }
 });
 
-app.get('/api/admin/subscriptions', databaseRequired, requireAuth, requireAdmin, async (_req, res, next) => {
-  try { res.json(await Subscription.find().populate('userId', 'name email').sort({ createdAt: -1 })); } catch (error) { next(error); }
-});
-
-app.patch('/api/admin/subscriptions/:id/approve', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
+app.get('/api/admin/subscriptions', requireAuth, requireAdmin, async (_req, res, next) => {
   try {
-    const subscription = await Subscription.findById(req.params.id);
-    if (!subscription) return res.status(404).json({ error: 'طلب الاشتراك غير موجود.' });
-    subscription.status = 'approved'; subscription.reviewedAt = new Date(); await subscription.save();
-    await User.findByIdAndUpdate(subscription.userId, { isSubscribed: true, activatedAt: new Date() });
-    res.json({ subscription });
+    const result = await query(`
+      SELECT s.*, u.name as user_name, u.email as user_email 
+      FROM subscriptions s 
+      JOIN users u ON s.user_id = u.id 
+      ORDER BY s.created_at DESC
+    `);
+    res.json(result.rows.map(row => ({
+      ...row,
+      userId: { _id: row.user_id, id: row.user_id, name: row.user_name, email: row.user_email }
+    })));
   } catch (error) { next(error); }
 });
 
-app.get('/api/admin/news', databaseRequired, requireAuth, requireAdmin, async (_req, res, next) => {
-  try { res.json(await News.find().sort({ createdAt: -1 })); } catch (error) { next(error); }
+app.patch('/api/admin/subscriptions/:id/approve', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const subRes = await query('SELECT * FROM subscriptions WHERE id = $1', [req.params.id]);
+    if (subRes.rows.length === 0) return res.status(404).json({ error: 'طلب الاشتراك غير موجود.' });
+    const sub = subRes.rows[0];
+    
+    await query('UPDATE subscriptions SET status = $1, reviewed_at = CURRENT_TIMESTAMP WHERE id = $2', ['approved', sub.id]);
+    await query('UPDATE users SET is_subscribed = TRUE, activated_at = CURRENT_TIMESTAMP WHERE id = $1', [sub.user_id]);
+    
+    res.json({ subscription: { ...sub, status: 'approved' } });
+  } catch (error) { next(error); }
 });
 
-app.post('/api/admin/news', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
+app.get('/api/admin/news', requireAuth, requireAdmin, async (_req, res, next) => {
+  try { 
+    const result = await query('SELECT * FROM news ORDER BY created_at DESC'); 
+    res.json(result.rows); 
+  } catch (error) { next(error); }
+});
+
+app.post('/api/admin/news', requireAuth, requireAdmin, async (req, res, next) => {
   try {
     const { title, summary, category, sourceUrl } = req.body;
     if (!title?.trim() || !summary?.trim()) return res.status(400).json({ error: 'أدخل عنوان الخبر وملخصه.' });
-    if (sourceUrl && !/^https?:\/\//i.test(sourceUrl.trim())) return res.status(400).json({ error: 'رابط المصدر يجب أن يبدأ بـ http:// أو https://.' });
-    const news = await News.create({ title: title.trim(), summary: summary.trim(), category: category?.trim() || 'تحديث السوق', sourceUrl: sourceUrl?.trim() || '' });
-    res.status(201).json(news);
+    const newsRes = await query(
+      `INSERT INTO news (title, summary, category, source_url) VALUES ($1, $2, $3, $4) RETURNING *`,
+      [title.trim(), summary.trim(), category?.trim() || 'تحديث السوق', sourceUrl?.trim() || '']
+    );
+    res.status(201).json(newsRes.rows[0]);
   } catch (error) { next(error); }
 });
 
-app.delete('/api/admin/news/:id', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
+app.delete('/api/admin/news/:id', requireAuth, requireAdmin, async (req, res, next) => {
   try {
-    const news = await News.findByIdAndDelete(req.params.id);
-    if (!news) return res.status(404).json({ error: 'الخبر غير موجود.' });
+    const result = await query('DELETE FROM news WHERE id = $1 RETURNING id', [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'الخبر غير موجود.' });
     res.status(204).end();
   } catch (error) { next(error); }
 });
 
-app.get('/api/admin/courses', databaseRequired, requireAuth, requireAdmin, async (_req, res, next) => {
+app.get('/api/admin/courses', requireAuth, requireAdmin, async (_req, res, next) => {
   try {
-    const [courses, lessons, resources] = await Promise.all([Course.find().sort({ createdAt: -1 }), Lesson.find().sort({ createdAt: -1 }), Resource.find().sort({ createdAt: -1 })]);
-    res.json({ courses, lessons, resources });
+    const [courses, lessons, resources] = await Promise.all([
+      query('SELECT * FROM courses ORDER BY created_at DESC'),
+      query('SELECT * FROM lessons ORDER BY created_at DESC'),
+      query('SELECT * FROM resources ORDER BY created_at DESC')
+    ]);
+    res.json({ courses: courses.rows, lessons: lessons.rows, resources: resources.rows });
   } catch (error) { next(error); }
 });
 
-app.post('/api/admin/courses', databaseRequired, requireAuth, requireAdmin, contentUpload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'attachment', maxCount: 1 }]), async (req, res, next) => {
+app.post('/api/admin/courses', requireAuth, requireAdmin, contentUpload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'attachment', maxCount: 1 }]), async (req, res, next) => {
   try {
     if (!req.body.title?.trim()) return res.status(400).json({ error: 'أدخل اسم الكورس.' });
     const isFree = req.body.isFree === 'true' || req.body.isFree === true;
-    const course = await Course.create({ title: req.body.title.trim(), description: req.body.description?.trim() || '', category: req.body.category?.trim() || 'general', thumbnailPath: publicUploadPath(req.files?.thumbnail?.[0]), attachmentPath: publicUploadPath(req.files?.attachment?.[0]), isFree });
-    res.status(201).json({ course });
-  } catch (error) { await Promise.all([removeUploadedFile(publicUploadPath(req.files?.thumbnail?.[0])), removeUploadedFile(publicUploadPath(req.files?.attachment?.[0]))]); next(error); }
+    const courseRes = await query(
+      `INSERT INTO courses (title, description, category, thumbnail_path, attachment_path, is_free) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [req.body.title.trim(), req.body.description?.trim() || '', req.body.category?.trim() || 'general', publicUploadPath(req.files?.thumbnail?.[0]), publicUploadPath(req.files?.attachment?.[0]), isFree]
+    );
+    res.status(201).json({ course: courseRes.rows[0] });
+  } catch (error) { next(error); }
 });
 
-app.delete('/api/admin/courses/:id', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
+app.delete('/api/admin/courses/:id', requireAuth, requireAdmin, async (req, res, next) => {
   try {
-    const course = await Course.findById(req.params.id);
-    if (!course) return res.status(404).json({ error: 'الكورس غير موجود.' });
-    const [lessons, resources] = await Promise.all([Lesson.find({ courseId: course._id }), Resource.find({ courseId: course._id })]);
-    const files = [course.thumbnailPath, course.attachmentPath, ...lessons.flatMap(item => [item.videoPath, item.attachmentPath]), ...resources.map(item => item.filePath)];
-    await Promise.all([Course.findByIdAndDelete(course._id), Lesson.deleteMany({ courseId: course._id }), Resource.deleteMany({ courseId: course._id }), Progress.deleteMany({ courseId: course._id }), User.updateMany({ currentCourseId: course._id }, { currentCourseId: null }), ...files.map(removeUploadedFile)]);
+    await query('DELETE FROM courses WHERE id = $1', [req.params.id]);
     res.status(204).end();
   } catch (error) { next(error); }
 });
 
-app.post('/api/admin/lessons', databaseRequired, requireAuth, requireAdmin, contentUpload.fields([{ name: 'video', maxCount: 1 }, { name: 'attachment', maxCount: 1 }]), async (req, res, next) => {
+app.post('/api/admin/lessons', requireAuth, requireAdmin, contentUpload.fields([{ name: 'video', maxCount: 1 }, { name: 'attachment', maxCount: 1 }]), async (req, res, next) => {
   try {
-    if (!req.body.title?.trim()) return res.status(400).json({ error: 'أدخل اسم المقطع أو الدرس.' });
-    if (req.body.courseId && !await Course.exists({ _id: req.body.courseId })) return res.status(404).json({ error: 'الكورس المحدد غير موجود.' });
-    const lesson = await Lesson.create({ courseId: req.body.courseId || null, title: req.body.title.trim(), description: req.body.description?.trim() || '', category: req.body.category?.trim() || 'general', videoUrl: req.body.videoUrl?.trim() || '', videoPath: publicUploadPath(req.files?.video?.[0]), attachmentPath: publicUploadPath(req.files?.attachment?.[0]), durationSeconds: Number(req.body.durationSeconds || 0) });
-    res.status(201).json({ lesson });
-  } catch (error) { await Promise.all([removeUploadedFile(publicUploadPath(req.files?.video?.[0])), removeUploadedFile(publicUploadPath(req.files?.attachment?.[0]))]); next(error); }
+    if (!req.body.title?.trim()) return res.status(400).json({ error: 'أدخل اسم الدرس.' });
+    const lessonRes = await query(
+      `INSERT INTO lessons (course_id, title, description, category, video_url, video_path, attachment_path, duration_seconds) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [req.body.courseId || null, req.body.title.trim(), req.body.description?.trim() || '', req.body.category?.trim() || 'general', req.body.videoUrl?.trim() || '', publicUploadPath(req.files?.video?.[0]), publicUploadPath(req.files?.attachment?.[0]), Number(req.body.durationSeconds || 0)]
+    );
+    res.status(201).json({ lesson: lessonRes.rows[0] });
+  } catch (error) { next(error); }
 });
 
-app.delete('/api/admin/lessons/:id', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
+app.delete('/api/admin/lessons/:id', requireAuth, requireAdmin, async (req, res, next) => {
   try {
-    const lesson = await Lesson.findById(req.params.id);
-    if (!lesson) return res.status(404).json({ error: 'المقطع غير موجود.' });
-    const resources = await Resource.find({ lessonId: lesson._id });
-    await Promise.all([Lesson.findByIdAndDelete(lesson._id), Resource.deleteMany({ lessonId: lesson._id }), Progress.deleteMany({ lessonId: lesson._id }), removeUploadedFile(lesson.videoPath), removeUploadedFile(lesson.attachmentPath), ...resources.map(item => removeUploadedFile(item.filePath))]);
+    await query('DELETE FROM lessons WHERE id = $1', [req.params.id]);
     res.status(204).end();
   } catch (error) { next(error); }
 });
 
-app.post('/api/admin/resources', databaseRequired, requireAuth, requireAdmin, contentUpload.single('file'), async (req, res, next) => {
-  try {
-    if (!req.file || !req.body.title?.trim()) return res.status(400).json({ error: 'اختر ملفاً وأدخل عنوانه.' });
-    if (req.body.courseId && !await Course.exists({ _id: req.body.courseId })) return res.status(404).json({ error: 'الكورس المحدد غير موجود.' });
-    if (req.body.lessonId && !await Lesson.exists({ _id: req.body.lessonId })) return res.status(404).json({ error: 'الدرس المحدد غير موجود.' });
-    const resource = await Resource.create({ courseId: req.body.courseId || null, lessonId: req.body.lessonId || null, title: req.body.title.trim(), filePath: publicUploadPath(req.file), originalName: req.file.originalname, mimeType: req.file.mimetype, size: req.file.size });
-    res.status(201).json({ resource });
-  } catch (error) { if (req.file) await removeUploadedFile(publicUploadPath(req.file)); next(error); }
-});
-
-app.delete('/api/admin/resources/:id', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
-  try {
-    const resource = await Resource.findByIdAndDelete(req.params.id);
-    if (!resource) return res.status(404).json({ error: 'الملف غير موجود.' });
-    await removeUploadedFile(resource.filePath);
-    res.status(204).end();
-  } catch (error) { next(error); }
-});
-
-app.post('/api/admin/quiz-files', databaseRequired, requireAuth, requireAdmin, contentUpload.single('file'), async (req, res, next) => {
+app.post('/api/admin/quiz-files', requireAuth, requireAdmin, contentUpload.single('file'), async (req, res, next) => {
   try {
     if (!req.file || !req.body.title?.trim()) return res.status(400).json({ error: 'اختر ملفاً وأدخل عنوان الاختبار.' });
-    const quizFile = await QuizFile.create({ 
-      title: req.body.title.trim(), 
-      filePath: publicUploadPath(req.file), 
-      originalName: req.file.originalname, 
-      mimeType: req.file.mimetype, 
-      size: req.file.size 
-    });
-    res.status(201).json({ quizFile });
-  } catch (error) { if (req.file) await removeUploadedFile(publicUploadPath(req.file)); next(error); }
-});
-
-app.get('/api/admin/quiz-files', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
-  try {
-    res.json(await QuizFile.find().sort({ createdAt: -1 }));
+    const quizRes = await query(
+      `INSERT INTO quiz_files (title, file_path, original_name, mime_type, size) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [req.body.title.trim(), publicUploadPath(req.file), req.file.originalname, req.file.mimetype, req.file.size]
+    );
+    res.status(201).json({ quizFile: quizRes.rows[0] });
   } catch (error) { next(error); }
 });
 
-app.delete('/api/admin/quiz-files/:id', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
+app.get('/api/admin/quiz-files', requireAuth, requireAdmin, async (_req, res, next) => {
   try {
-    const quizFile = await QuizFile.findByIdAndDelete(req.params.id);
-    if (!quizFile) return res.status(404).json({ error: 'ملف الاختبار غير موجود.' });
-    await removeUploadedFile(quizFile.filePath);
+    const result = await query('SELECT * FROM quiz_files ORDER BY created_at DESC');
+    res.json(result.rows);
+  } catch (error) { next(error); }
+});
+
+app.delete('/api/admin/quiz-files/:id', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    await query('DELETE FROM quiz_files WHERE id = $1', [req.params.id]);
     res.status(204).end();
   } catch (error) { next(error); }
 });
 
-app.get('/api/admin/analyses', databaseRequired, requireAuth, requireAdmin, async (_req, res, next) => {
-  try { res.json(await Analysis.find().sort({ createdAt: -1 })); } catch (error) { next(error); }
+app.get('/api/admin/analyses', requireAuth, requireAdmin, async (_req, res, next) => {
+  try { 
+    const result = await query('SELECT * FROM analyses ORDER BY created_at DESC'); 
+    res.json(result.rows); 
+  } catch (error) { next(error); }
 });
 
-app.post('/api/admin/analyses', databaseRequired, requireAuth, requireAdmin, contentUpload.single('attachment'), async (req, res, next) => {
+app.post('/api/admin/analyses', requireAuth, requireAdmin, contentUpload.single('attachment'), async (req, res, next) => {
   try {
     if (!req.body.title?.trim()) return res.status(400).json({ error: 'أدخل عنوان التحليل.' });
-    const analysis = await Analysis.create({ title: req.body.title.trim(), body: req.body.body?.trim() || '', attachmentPath: publicUploadPath(req.file) });
-    res.status(201).json({ analysis });
-  } catch (error) { if (req.file) await removeUploadedFile(publicUploadPath(req.file)); next(error); }
+    const analysisRes = await query(
+      `INSERT INTO analyses (title, body, attachment_path) VALUES ($1, $2, $3) RETURNING *`,
+      [req.body.title.trim(), req.body.body?.trim() || '', publicUploadPath(req.file)]
+    );
+    res.status(201).json({ analysis: analysisRes.rows[0] });
+  } catch (error) { next(error); }
 });
 
-app.delete('/api/admin/analyses/:id', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
+app.delete('/api/admin/analyses/:id', requireAuth, requireAdmin, async (req, res, next) => {
   try {
-    const analysis = await Analysis.findByIdAndDelete(req.params.id);
-    if (!analysis) return res.status(404).json({ error: 'التحليل غير موجود.' });
-    await removeUploadedFile(analysis.attachmentPath);
+    await query('DELETE FROM analyses WHERE id = $1', [req.params.id]);
     res.status(204).end();
   } catch (error) { next(error); }
 });
 
-app.get('/api/admin/students', databaseRequired, requireAuth, requireAdmin, async (_req, res, next) => {
-  try { res.json(await User.find({ role: 'student' }).populate('currentCourseId', 'title').select('name email isSubscribed activatedAt currentCourseId createdAt').sort({ createdAt: -1 })); } catch (error) { next(error); }
-});
-
-app.get('/api/admin/student-performance', databaseRequired, requireAuth, requireAdmin, async (_req, res, next) => {
+app.get('/api/admin/students', requireAuth, requireAdmin, async (_req, res, next) => {
   try {
-    const [students, lessonCounts, progressCounts] = await Promise.all([
-      User.find({ role: 'student' }).populate('currentCourseId', 'title').select('name email isSubscribed activatedAt currentCourseId createdAt').sort({ createdAt: -1 }),
-      Lesson.aggregate([{ $match: { isPublished: true } }, {$group: { _id: '$courseId', totalLessons: {$sum: 1 } } }]),
-      Progress.aggregate([{ $group: { _id: { userId: '$userId', courseId: '$courseId' }, watched: {$sum: 1 }, completed: { $sum: {$cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } } } }]),
-    ]);
-    const totalByCourse = new Map(lessonCounts.map(item => [String(item._id), item.totalLessons]));
-    const progressByStudent = new Map(progressCounts.map(item => [`${item._id.userId}:${item._id.courseId || ''}`, item]));
-    res.json(students.map(student => {
-      const courseId = student.currentCourseId?._id || null;
-      const progress = progressByStudent.get(`${student._id}:${courseId || ''}`) || { watched: 0, completed: 0 };
-      return { student, currentCourse: student.currentCourseId?.title || 'لم يتم اختيار كورس', totalLessons: totalByCourse.get(String(courseId)) || 0, watchedLessons: progress.watched, completedLessons: progress.completed };
-    }));
+    const result = await query(`
+      SELECT u.id, u.name, u.email, u.is_subscribed, u.activated_at, u.current_course_id, u.created_at, c.title as course_title 
+      FROM users u 
+      LEFT JOIN courses c ON u.current_course_id = c.id 
+      WHERE u.role = 'student' 
+      ORDER BY u.created_at DESC
+    `);
+    res.json(result.rows.map(row => ({
+      ...row,
+      currentCourseId: row.course_title ? { _id: row.current_course_id, title: row.course_title } : null
+    })));
   } catch (error) { next(error); }
 });
 
-app.delete('/api/admin/students/:id', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
+app.delete('/api/admin/students/:id', requireAuth, requireAdmin, async (req, res, next) => {
   try {
-    await Promise.all([User.findByIdAndDelete(req.params.id), Subscription.deleteMany({ userId: req.params.id }), Message.deleteMany({ userId: req.params.id }), Progress.deleteMany({ userId: req.params.id })]);
+    await query('DELETE FROM users WHERE id = $1', [req.params.id]);
     res.status(204).end();
   } catch (error) { next(error); }
 });
 
+// الملفات الثابتة والتشغيل
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'home.html')));
+
 app.use((err, _req, res, _next) => {
   if (err instanceof multer.MulterError) return res.status(400).json({ error: `فشل الرفع: ${err.message}` });
   if (err.status === 400) return res.status(400).json({ error: err.message });
@@ -612,23 +680,14 @@ app.use((err, _req, res, _next) => {
 
 async function startServer() {
   try {
-    const MONGO_URI = process.env.MONGO_URL || process.env.DATABASE_URL || "mongodb+srv://wleadwlead150_db_user:j3U18ZpQG8EYOWdo@fadil.wc6wbvu.mongodb.net/?appName=Fadil";
-    
-    mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 30000 })
-      .then(async () => {
-        console.log('✓ MongoDB connected successfully');
-        await seedDefaultAdmin();
-        await ensureFreeCourse();
-      })
-      .catch(err => {
-        console.error('⚠ MongoDB Connection Error:', err.message);
-      });
-
-  } catch (error) {
-    console.warn(`⚠ System Error: ${error.message}`);
+    await initDatabase();
+    await seedDefaultAdmin();
+    await ensureFreeCourse();
+    console.log('✓ PostgreSQL connected and all tables initialized successfully');
+    app.listen(PORT, () => console.log(`✓ FADIL TRADING is running at http://localhost:${PORT}`));
+  } catch (err) {
+    console.error('Database Initialization Error:', err);
   }
-
-  app.listen(PORT, () => console.log(`✓ FADIL TRADING is running at http://localhost:${PORT}`));
 }
 
 startServer();
