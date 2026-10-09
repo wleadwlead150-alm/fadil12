@@ -31,11 +31,53 @@
 
     <section class="container stats" aria-label="إحصائيات المنصة"><div class="stat"><strong>+24</strong><span>درس عملي</span></div><div class="stat"><strong>5</strong><span>مسارات تعليمية</span></div><div class="stat"><strong>1:1</strong><span>دعم مباشر للطلاب</span></div></section>
 
-    <section class="container section" id="courses"><div class="section-head"><div><h2>مساراتك التعليمية</h2><p>يتم فتح الدروس فور اعتماد اشتراكك من الإدارة.</p></div><span class="eyebrow" id="membershipLabel">الحالة: زائر</span></div>
+    <section class="container section" id="courses">
+      <div class="section-head">
+        <div><h2>مساراتك التعليمية</h2><p>يتم فتح الدروس فور اعتماد اشتراكك من الإدارة.</p></div>
+        <span class="eyebrow" id="membershipLabel">الحالة: زائر</span>
+      </div>
       <div class="notice" id="databaseNotice"></div>
       
-      <!-- الكورسات المدارة من لوحة التحكم -->
-      <div class="managed-courses" id="managedCourses"></div>
+      <!-- الكورسات الثابتة الأساسية (المقفلة والمفتوحة حسب العضوية) -->
+      <div class="course-grid">
+        <article class="course-card premium-course" onclick="openStaticCourse('SMC / ICT')">
+          <div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1611974789855-9c2a0a7236a?auto=format&fit=crop&w=900&q=85')"></div>
+          <div class="course-content"><span class="course-tag">المسار المتقدم</span><h3>مفاهيم SMC / ICT</h3><p>السيولة، الـ Order Blocks، وبناء فكرة التداول.</p></div>
+          <div class="course-lock"><span>🔒</span><b>مفاهيم SMC / ICT</b><small>استكشف الكورس</small></div>
+          <div class="course-start">ابدأ الدراسة ←</div>
+        </article>
+
+        <article class="course-card premium-course" onclick="openStaticCourse('Harmonic')">
+          <div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=900&q=85')"></div>
+          <div class="course-content"><span class="course-tag">تحليل فني</span><h3>مفاهيم Harmonic</h3><p>قراءة النماذج السعرية وتحديد مناطق الانعكاس.</p></div>
+          <div class="course-lock"><span>🔒</span><b>مفاهيم Harmonic</b><small>استكشف الكورس</small></div>
+          <div class="course-start">ابدأ الدراسة ←</div>
+        </article>
+
+        <article class="course-card premium-course" onclick="openStaticCourse('الأساسيات')">
+          <div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1642543492481-44e81e3914a7?auto=format&fit=crop&w=900&q=85')"></div>
+          <div class="course-content"><span class="course-tag">البداية الصحيحة</span><h3>الأساسيات</h3><p>لغة السوق، الشموع، وأنواع الأوامر.</p></div>
+          <div class="course-lock"><span>🔒</span><b>الأساسيات</b><small>استكشف الكورس</small></div>
+          <div class="course-start">ابدأ الدراسة ←</div>
+        </article>
+
+        <article class="course-card premium-course" onclick="openStaticCourse('إدارة رأس المال')">
+          <div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1621761191319-c6fb62004040?auto=format&fit=crop&w=900&q=85')"></div>
+          <div class="course-content"><span class="course-tag">حماية الحساب</span><h3>إدارة رأس المال</h3><p>المخاطر، حجم العقد، وخطة الاستمرارية.</p></div>
+          <div class="course-lock"><span>🔒</span><b>إدارة رأس المال</b><small>استكشف الكورس</small></div>
+          <div class="course-start">ابدأ الدراسة ←</div>
+        </article>
+
+        <article class="course-card premium-course highlight" id="books" onclick="openStaticCourse('الملازم والكتب')">
+          <div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1642052502780-8f8ad4fa1cc8?auto=format&fit=crop&w=900&q=85')"></div>
+          <div class="course-content"><span class="course-tag">مكتبة المتداول</span><h3>الملازم والكتب</h3><p>مراجع عملية قابلة للعودة إليها في كل مرحلة.</p></div>
+          <div class="course-lock"><span>🔒</span><b>الملازم والكتب</b><small>استكشف الكورس</small></div>
+          <div class="course-start">ابدأ الدراسة ←</div>
+        </article>
+      </div>
+
+      <!-- الكورسات المضافة حديثاً من لوحة التحكم -->
+      <div class="managed-courses" id="managedCourses" style="margin-top: 30px;"></div>
     </section>
 
     <section class="container section" id="analysis">
@@ -53,13 +95,11 @@
       <div class="published-analyses" id="publishedAnalyses"></div>
     </section>
 
-    <!-- قسم ملفات الاختبارات -->
     <section class="container section" id="tests">
       <div class="section-head"><div><span class="eyebrow">KNOWLEDGE CHECK</span><h2>ملفات الاختبارات</h2><p>حمل ملفات الأسئلة والأجوبة لمراجعة مستواك (تُفتح لأصحاب العضوية النشطة).</p></div></div>
       <div class="quiz-files-list panel" id="quizFilesList" style="padding: 20px;"><div class="empty">جارٍ تحميل الملفات...</div></div>
     </section>
 
-    <!-- قسم نتائج الطلاب -->
     <section class="container section" id="student-results">
       <div class="section-head"><div><span class="eyebrow">STUDENT PERFORMANCE</span><h2>نتائج الطلاب</h2><p>حمل ملفات النتائج لمعرفة أدائك في الاختبارات والمتابعة.</p></div></div>
       <div class="quiz-files-list panel" id="resultFilesList" style="padding: 20px;"><div class="empty">جارٍ تحميل النتائج...</div></div>
@@ -70,7 +110,6 @@
 
   <button class="fab" id="supportButton" aria-label="فتح الدعم الفني">💬</button>
   
-  <!-- النوافذ المنبثقة -->
   <div class="modal" id="supportModal" aria-hidden="true"><section class="modal-card" role="dialog">
     <div class="modal-head"><div><h3>الدعم الفني</h3><p>يرد فريق FADIL TRADING عليك هنا مباشرة.</p></div><button class="icon-btn" data-close="supportModal">×</button></div>
     <div class="chat-log" id="chatLog"><div class="empty">سجّل دخولك لبدء محادثة آمنة مع الدعم.</div></div>
@@ -132,6 +171,15 @@
       if (accBtn) accBtn.innerHTML = loggedIn ? 'خروج · ' + escapeHtml(state.user.name) : 'تسجيل الدخول';
       var memLabel = document.getElementById('membershipLabel');
       if (memLabel) memLabel.innerHTML = (state.user && state.user.isSubscribed) ? 'الحالة: عضوية نشطة ✓' : 'الحالة: زائر';
+      
+      var cards = document.querySelectorAll('.premium-course');
+      for (var i = 0; i < cards.length; i++) {
+        if (state.user && (state.user.isSubscribed || state.user.role === 'admin')) {
+          cards[i].classList.add('unlocked');
+        } else {
+          cards[i].classList.remove('unlocked');
+        }
+      }
     }
 
     async function loadStatus() {
@@ -147,15 +195,31 @@
       }
     }
 
+    // فتح الكورسات الثابتة أو الانتقال لصفحة الكورس إذا تم رفع كورس مطابق من الأدمن
+    window.openStaticCourse = async function(title) {
+      if (!state.token) { showModal('authModal'); return; }
+      if (!state.user.isSubscribed && state.user.role !== 'admin') {
+        showModal('subscriptionModal');
+        return;
+      }
+      try {
+        var courses = await api('/api/courses');
+        var found = courses.find(function(c) { return c.title.includes(title); });
+        if (found) {
+          window.location.href = '/course.html?id=' + found._id;
+        } else {
+          alert('هذا الكورس قيد الإعداد وسيتم إضافته قريباً من الإدارة.');
+        }
+      } catch (e) { alert(e.message); }
+    };
+
     async function loadManagedCourses() {
       var container = document.getElementById('managedCourses');
       if (!container) return;
       try {
         var courses = await api('/api/courses');
-        if (!courses || courses.length === 0) {
-           container.innerHTML = '<div class="empty">لم تضف الإدارة كورسات جديدة بعد.</div>'; return;
-        }
-        var html = '<div class="course-grid uploaded-course-grid">';
+        if (!courses || courses.length === 0) return;
+        var html = '<h3 class="managed-title">الكورسات الإضافية</h3><div class="course-grid uploaded-course-grid">';
         for (var i = 0; i < courses.length; i++) {
            var c = courses[i];
            html += '<article class="course-card uploaded-course ' + ((state.user && (state.user.isSubscribed || state.user.role === 'admin') || c.isFree) ? 'unlocked' : '') + '">' +
@@ -170,7 +234,7 @@
         }
         html += '</div>';
         container.innerHTML = html;
-      } catch (e) { container.innerHTML = '<div class="empty">' + escapeHtml(e.message) + '</div>'; }
+      } catch (e) {}
     }
 
     window.openManagedCourse = async function(courseId) {
