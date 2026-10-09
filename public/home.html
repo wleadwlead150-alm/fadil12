@@ -10,7 +10,6 @@
     .bubble time { display: block; font-size: 0.75rem; opacity: 0.8; margin-top: 5px; }
     .bubble.admin { background-color: #007bff !important; align-self: flex-start !important; color: white !important; border-radius: 15px 15px 15px 0 !important; border: none; }
     .bubble.student { background-color: #28a745 !important; align-self: flex-end !important; color: white !important; border-radius: 15px 15px 0 15px !important; border: none; }
-    /* ضمان ظهور النوافذ المنبثقة */
     .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 99999; align-items: center; justify-content: center; }
     .modal.open { display: flex !important; }
   </style>
@@ -18,7 +17,7 @@
 <body>
   <header class="site-header"><div class="container nav">
     <a class="brand" href="#home"><span class="brand-mark">♛</span><span>FADIL TRADING<small>EDUCATION PLATFORM</small></span></a>
-    <nav class="nav-links"><a href="#home">الرئيسية</a><a href="#courses">الكورسات</a><a href="#books">الملازم</a><a href="#analysis">التحليلات الأسبوعية</a><a href="#tests">الاختبارات</a></nav>
+    <nav class="nav-links"><a href="#home">الرئيسية</a><a href="#courses">الكورسات</a><a href="#analysis">تحليل السوق</a><a href="#tests">الاختبارات</a><a href="#student-results">النتائج</a></nav>
     <button class="btn btn-outline" id="accountButton">تسجيل الدخول</button>
   </div></header>
 
@@ -34,15 +33,9 @@
 
     <section class="container section" id="courses"><div class="section-head"><div><h2>مساراتك التعليمية</h2><p>يتم فتح الدروس فور اعتماد اشتراكك من الإدارة.</p></div><span class="eyebrow" id="membershipLabel">الحالة: زائر</span></div>
       <div class="notice" id="databaseNotice"></div>
-      <div class="course-grid">
-        <article class="course-card premium-course"><div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1611974789855-9c2a0a7236a?auto=format&amp;fit=crop&amp;w=900&amp;q=85')"></div><div class="course-content"><span class="course-tag">المسار المتقدم</span><h3>مفاهيم SMC / ICT</h3><p>السيولة، الـ Order Blocks، وبناء فكرة التداول.</p></div><div class="course-lock"><span>🔒</span><b>مفاهيم SMC / ICT</b><small>استكشف الكورس</small></div><div class="course-start">ابدأ الدراسة ←</div></article>
-        <article class="course-card premium-course"><div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&amp;fit=crop&amp;w=900&amp;q=85')"></div><div class="course-content"><span class="course-tag">تحليل فني</span><h3>مفاهيم Harmonic</h3><p>قراءة النماذج السعرية وتحديد مناطق الانعكاس.</p></div><div class="course-lock"><span>🔒</span><b>مفاهيم Harmonic</b><small>استكشف الكورس</small></div><div class="course-start">ابدأ الدراسة ←</div></article>
-        <article class="course-card premium-course"><div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1642543492481-44e81e3914a7?auto=format&amp;fit=crop&amp;w=900&amp;q=85')"></div><div class="course-content"><span class="course-tag">البداية الصحيحة</span><h3>الأساسيات</h3><p>لغة السوق، الشموع، وأنواع الأوامر.</p></div><div class="course-lock"><span>🔒</span><b>الأساسيات</b><small>استكشف الكورس</small></div><div class="course-start">ابدأ الدراسة ←</div></article>
-        <article class="course-card premium-course"><div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1621761191319-c6fb62004040?auto=format&amp;fit=crop&amp;w=900&amp;q=85')"></div><div class="course-content"><span class="course-tag">حماية الحساب</span><h3>إدارة رأس المال</h3><p>المخاطر، حجم العقد، وخطة الاستمرارية.</p></div><div class="course-lock"><span>🔒</span><b>إدارة رأس المال</b><small>استكشف الكورس</small></div><div class="course-start">ابدأ الدراسة ←</div></article>
-        <article class="course-card premium-course highlight" id="books"><div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1642052502780-8f8ad4fa1cc8?auto=format&amp;fit=crop&amp;w=900&amp;q=85')"></div><div class="course-content"><span class="course-tag">مكتبة المتداول</span><h3>الملازم والكتب</h3><p>مراجع عملية قابلة للعودة إليها في كل مرحلة.</p></div><div class="course-lock"><span>🔒</span><b>الملازم والكتب</b><small>استكشف الكورس</small></div><div class="course-start">ابدأ الدراسة ←</div></article>
-      </div>
+      
+      <!-- الكورسات المدارة من لوحة التحكم ستظهر هنا -->
       <div class="managed-courses" id="managedCourses"></div>
-      <div class="course-viewer panel" id="courseViewer" style="display:none;"></div>
     </section>
 
     <section class="container section" id="analysis">
@@ -60,9 +53,16 @@
       <div class="published-analyses" id="publishedAnalyses"></div>
     </section>
 
+    <!-- قسم ملفات الاختبارات -->
     <section class="container section" id="tests">
       <div class="section-head"><div><span class="eyebrow">KNOWLEDGE CHECK</span><h2>ملفات الاختبارات</h2><p>حمل ملفات الأسئلة والأجوبة لمراجعة مستواك (تُفتح لأصحاب العضوية النشطة).</p></div></div>
       <div class="quiz-files-list panel" id="quizFilesList" style="padding: 20px;"><div class="empty">جارٍ تحميل الملفات...</div></div>
+    </section>
+
+    <!-- قسم نتائج الطلاب الجديد -->
+    <section class="container section" id="student-results">
+      <div class="section-head"><div><span class="eyebrow">STUDENT PERFORMANCE</span><h2>نتائج الطلاب</h2><p>حمل ملفات النتائج لمعرفة أدائك في الاختبارات والمتابعة.</p></div></div>
+      <div class="quiz-files-list panel" id="resultFilesList" style="padding: 20px;"><div class="empty">جارٍ تحميل النتائج...</div></div>
     </section>
   </main>
   
@@ -70,19 +70,20 @@
 
   <button class="fab" id="supportButton" aria-label="فتح الدعم الفني">💬</button>
   
-  <div class="modal" id="supportModal" aria-hidden="true"><section class="modal-card" role="dialog" aria-modal="true" aria-label="الدعم الفني">
-    <div class="modal-head"><div><h3>الدعم الفني</h3><p>يرد فريق FADIL TRADING عليك هنا مباشرة.</p></div><button class="icon-btn" data-close="supportModal" aria-label="إغلاق">×</button></div>
+  <!-- النوافذ المنبثقة -->
+  <div class="modal" id="supportModal" aria-hidden="true"><section class="modal-card" role="dialog">
+    <div class="modal-head"><div><h3>الدعم الفني</h3><p>يرد فريق FADIL TRADING عليك هنا مباشرة.</p></div><button class="icon-btn" data-close="supportModal">×</button></div>
     <div class="chat-log" id="chatLog"><div class="empty">سجّل دخولك لبدء محادثة آمنة مع الدعم.</div></div>
     <form class="chat-form" id="chatForm"><input id="chatInput" maxlength="1500" placeholder="اكتب رسالتك..." autocomplete="off"><button class="btn" type="submit">إرسال</button></form>
   </section></div>
 
-  <div class="modal" id="authModal" aria-hidden="true"><section class="modal-card" role="dialog" aria-modal="true" aria-label="الحساب">
-    <div class="modal-head"><div><h3 id="authTitle">تسجيل الدخول</h3><p>حسابك يحفظ تقدمك ويعرض حالة عضويتك.</p></div><button class="icon-btn" data-close="authModal" aria-label="إغلاق">×</button></div>
+  <div class="modal" id="authModal" aria-hidden="true"><section class="modal-card" role="dialog">
+    <div class="modal-head"><div><h3 id="authTitle">تسجيل الدخول</h3><p>حسابك يحفظ تقدمك ويعرض حالة عضويتك.</p></div><button class="icon-btn" data-close="authModal">×</button></div>
     <form class="form-grid" id="authForm" style="padding:20px"><input id="nameInput" placeholder="الاسم الكامل" maxlength="80" style="display:none"><input id="emailInput" type="email" placeholder="البريد الإلكتروني" required><input id="passwordInput" type="password" placeholder="كلمة المرور (8 أحرف على الأقل)" minlength="8" required><button class="btn" type="submit" id="authSubmit">دخول</button><button class="icon-btn" type="button" id="authSwitch">ليس لديك حساب؟ أنشئ حساباً</button></form>
   </section></div>
 
-  <div class="modal" id="subscriptionModal" aria-hidden="true"><section class="modal-card" role="dialog" aria-modal="true" aria-label="طلب اشتراك">
-    <div class="modal-head"><div><h3>طلب تفعيل العضوية</h3><p>أرفق إثبات الدفع ليتم مراجعته من الإدارة.</p></div><button class="icon-btn" data-close="subscriptionModal" aria-label="إغلاق">×</button></div>
+  <div class="modal" id="subscriptionModal" aria-hidden="true"><section class="modal-card" role="dialog">
+    <div class="modal-head"><div><h3>طلب تفعيل العضوية</h3><p>أرفق إثبات الدفع ليتم مراجعته من الإدارة.</p></div><button class="icon-btn" data-close="subscriptionModal">×</button></div>
     <form class="form-grid" id="subscriptionForm" style="padding:20px">
       <div class="subscription-payment">
         <span>رسوم العضوية</span>
@@ -98,7 +99,6 @@
   </section></div>
 
   <script>
-    // الجافاسكربت الخالي من الأخطاء (Crash-Proof)
     var safeUser = null;
     try {
       var stored = localStorage.getItem('fadilUser');
@@ -109,21 +109,9 @@
 
     var state = { token: safeToken, user: safeUser, register: false };
     
-    function escapeHtml(v) { 
-      return String(v).replace(/[&<>'"]/g, function(c) { 
-        return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]; 
-      }); 
-    }
-
-    function showModal(id) { 
-      var el = document.getElementById(id);
-      if(el) { el.classList.add('open'); }
-    }
-    
-    function closeModal(id) { 
-      var el = document.getElementById(id);
-      if(el) { el.classList.remove('open'); }
-    }
+    function escapeHtml(v) { return String(v).replace(/[&<>'"]/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]; }); }
+    function showModal(id) { var el = document.getElementById(id); if(el) { el.classList.add('open'); } }
+    function closeModal(id) { var el = document.getElementById(id); if(el) { el.classList.remove('open'); } }
 
     async function api(url, options) {
       options = options || {};
@@ -142,18 +130,8 @@
       var loggedIn = !!state.user;
       var accBtn = document.getElementById('accountButton');
       if (accBtn) accBtn.innerHTML = loggedIn ? 'خروج · ' + escapeHtml(state.user.name) : 'تسجيل الدخول';
-      
       var memLabel = document.getElementById('membershipLabel');
       if (memLabel) memLabel.innerHTML = (state.user && state.user.isSubscribed) ? 'الحالة: عضوية نشطة ✓' : 'الحالة: زائر';
-      
-      var cards = document.querySelectorAll('.premium-course');
-      for (var i = 0; i < cards.length; i++) {
-        if (state.user && (state.user.isSubscribed || state.user.role === 'admin')) {
-          cards[i].classList.add('unlocked');
-        } else {
-          cards[i].classList.remove('unlocked');
-        }
-      }
     }
 
     async function loadStatus() {
@@ -175,13 +153,12 @@
       try {
         var courses = await api('/api/courses');
         if (!courses || courses.length === 0) {
-           container.innerHTML = '<div class="empty">لم تضف الإدارة كورسات جديدة بعد.</div>';
-           return;
+           container.innerHTML = '<div class="empty">لم تضف الإدارة كورسات جديدة بعد.</div>'; return;
         }
-        var html = '<h3 class="managed-title">الكورسات المضافة حديثاً</h3><div class="course-grid uploaded-course-grid">';
+        var html = '<div class="course-grid uploaded-course-grid">';
         for (var i = 0; i < courses.length; i++) {
            var c = courses[i];
-           html += '<article class="course-card uploaded-course">' +
+           html += '<article class="course-card uploaded-course ' + ((state.user && (state.user.isSubscribed || state.user.role === 'admin') || c.isFree) ? 'unlocked' : '') + '">' +
                      '<div class="course-image" style="background-image:url(\'' + escapeHtml(c.thumbnailPath || '') + '\')"></div>' +
                      '<div class="course-content">' +
                        '<span class="course-tag">' + escapeHtml(c.category || 'عام') + '</span>' +
@@ -196,43 +173,13 @@
       } catch (e) { container.innerHTML = '<div class="empty">' + escapeHtml(e.message) + '</div>'; }
     }
 
+    // هنا يتم النقل للصفحة الجديدة التي أنشأناها
     window.openManagedCourse = async function(courseId) {
-      if (!state.token) return showModal('authModal');
-      var viewer = document.getElementById('courseViewer');
-      if (!viewer) return;
-      viewer.style.display = 'block';
-      viewer.innerHTML = '<div class="empty">جارٍ تجهيز محتوى الكورس...</div>';
-      viewer.scrollIntoView({ behavior:'smooth', block:'center' });
+      if (!state.token) { showModal('authModal'); return; }
       try {
         await api('/api/courses/' + courseId + '/select', { method:'POST' });
-        var data = await api('/api/courses/' + courseId + '/content');
-        var html = '<div class="panel-title"><div><b>' + escapeHtml(data.course.title) + '</b><small>' + escapeHtml(data.course.description || '') + '</small></div></div>';
-        if (data.lessons && data.lessons.length > 0) {
-          html += '<div class="lesson-list">';
-          for (var i=0; i<data.lessons.length; i++) {
-             var l = data.lessons[i];
-             html += '<article class="lesson-item"><div><b>' + escapeHtml(l.title) + '</b><p>' + escapeHtml(l.description || '') + '</p>';
-             if (l.videoPath) html += '<video controls preload="metadata" src="' + escapeHtml(l.videoPath) + '"></video>';
-             else if (l.videoUrl) html += '<a class="accent" href="' + escapeHtml(l.videoUrl) + '" target="_blank">فتح المقطع</a>';
-             if (l.attachmentPath) html += '<a class="accent" href="' + escapeHtml(l.attachmentPath) + '" target="_blank">تحميل المرفق</a>';
-             html += '</div><button class="btn btn-outline" onclick="completeLesson(\'' + l._id + '\')">تمت المشاهدة</button></article>';
-          }
-          html += '</div>';
-        } else { html += '<div class="empty">لم ترفع الإدارة مقاطع بعد.</div>'; }
-        if (data.resources && data.resources.length > 0) {
-          html += '<div class="resource-list"><b>ملفات الكورس</b>';
-          for (var j=0; j<data.resources.length; j++) {
-             html += '<a href="' + escapeHtml(data.resources[j].filePath) + '" target="_blank" style="display:block; padding:10px; background:#111; border-radius:8px; margin-top:5px;">' + escapeHtml(data.resources[j].title) + ' ↓</a>';
-          }
-          html += '</div>';
-        }
-        viewer.innerHTML = html;
-        loadStatus();
-      } catch (error) { viewer.innerHTML = '<div class="empty">' + escapeHtml(error.message) + '</div>'; }
-    };
-
-    window.completeLesson = async function(lessonId) {
-      try { await api('/api/lessons/' + lessonId + '/progress', { method:'POST', body:JSON.stringify({ status:'completed' }) }); alert('تم الحفظ.'); loadStatus(); } catch (e) { alert(e.message); }
+        window.location.href = '/course.html?id=' + courseId;
+      } catch (error) { alert(escapeHtml(error.message)); }
     };
 
     async function loadQuizFiles() {
@@ -244,9 +191,22 @@
         if (files && files.length > 0) {
            var html = '<div class="resource-list">';
            for (var i=0; i<files.length; i++) { html += '<a href="' + escapeHtml(files[i].filePath) + '" target="_blank" style="display:block; padding:15px; background:#111; border-radius:8px; margin-bottom:10px; font-weight:bold; color:var(--accent); text-decoration:none;">📄 ' + escapeHtml(files[i].title) + ' ↓</a>'; }
-           html += '</div>';
-           container.innerHTML = html;
-        } else { container.innerHTML = '<div class="empty">لم ترفع الإدارة ملفات حالياً.</div>'; }
+           html += '</div>'; container.innerHTML = html;
+        } else { container.innerHTML = '<div class="empty">لم ترفع الإدارة ملفات اختبارات حالياً.</div>'; }
+      } catch (e) { container.innerHTML = '<div class="empty">' + escapeHtml(e.message) + '</div>'; }
+    }
+
+    async function loadResultFiles() {
+      var container = document.getElementById('resultFilesList');
+      if (!container) return;
+      if (!state.token) { container.innerHTML = '<div class="empty">سجّل دخولك لعرض ملفات النتائج.</div>'; return; }
+      try {
+        var files = await api('/api/result-files');
+        if (files && files.length > 0) {
+           var html = '<div class="resource-list">';
+           for (var i=0; i<files.length; i++) { html += '<a href="' + escapeHtml(files[i].filePath) + '" target="_blank" style="display:block; padding:15px; background:#111; border-radius:8px; margin-bottom:10px; font-weight:bold; color:var(--accent); text-decoration:none;">📊 ' + escapeHtml(files[i].title) + ' ↓</a>'; }
+           html += '</div>'; container.innerHTML = html;
+        } else { container.innerHTML = '<div class="empty">لم يتم رفع نتائج حتى الآن.</div>'; }
       } catch (e) { container.innerHTML = '<div class="empty">' + escapeHtml(e.message) + '</div>'; }
     }
 
@@ -257,9 +217,7 @@
         var news = await api('/api/news');
         if (news && news.length > 0) {
            var html = '';
-           for (var i=0; i<news.length; i++) {
-              html += '<article class="news-item"><div class="news-meta"><span>' + escapeHtml(news[i].category) + '</span><time>' + new Date(news[i].createdAt).toLocaleDateString('ar-IQ') + '</time></div><h3>' + escapeHtml(news[i].title) + '</h3><p>' + escapeHtml(news[i].summary) + '</p>' + (news[i].sourceUrl ? '<a href="' + escapeHtml(news[i].sourceUrl) + '" target="_blank">قراءة المصدر ←</a>' : '') + '</article>';
-           }
+           for (var i=0; i<news.length; i++) { html += '<article class="news-item"><div class="news-meta"><span>' + escapeHtml(news[i].category) + '</span><time>' + new Date(news[i].createdAt).toLocaleDateString('ar-IQ') + '</time></div><h3>' + escapeHtml(news[i].title) + '</h3><p>' + escapeHtml(news[i].summary) + '</p>' + (news[i].sourceUrl ? '<a href="' + escapeHtml(news[i].sourceUrl) + '" target="_blank">قراءة المصدر ←</a>' : '') + '</article>'; }
            list.innerHTML = html;
         } else { list.innerHTML = '<div class="empty">لا توجد أخبار.</div>'; }
       } catch (e) { list.innerHTML = '<div class="empty">' + escapeHtml(e.message) + '</div>'; }
@@ -272,15 +230,12 @@
         var analyses = await api('/api/analyses');
         if (analyses && analyses.length > 0) {
            var html = '<h3 class="managed-title">تحليلات الإدارة</h3>';
-           for(var i=0; i<analyses.length; i++) {
-             html += '<article class="analysis-card"><div><span class="course-tag">تحليل منشور</span><h3>' + escapeHtml(analyses[i].title) + '</h3><p>' + escapeHtml(analyses[i].body || '') + '</p></div>' + (analyses[i].attachmentPath ? '<a class="btn btn-outline" href="' + escapeHtml(analyses[i].attachmentPath) + '" target="_blank">فتح المرفق</a>' : '') + '</article>';
-           }
+           for(var i=0; i<analyses.length; i++) { html += '<article class="analysis-card"><div><span class="course-tag">تحليل منشور</span><h3>' + escapeHtml(analyses[i].title) + '</h3><p>' + escapeHtml(analyses[i].body || '') + '</p></div>' + (analyses[i].attachmentPath ? '<a class="btn btn-outline" href="' + escapeHtml(analyses[i].attachmentPath) + '" target="_blank">فتح المرفق</a>' : '') + '</article>'; }
            container.innerHTML = html;
         } else { container.innerHTML = ''; }
       } catch (e) { container.innerHTML = ''; }
     }
 
-    // مدير الأحداث الموحد لحل مشكلة الأزرار نهائياً (Event Delegation)
     document.addEventListener('click', async function(e) {
       var closeBtn = e.target.closest('[data-close]');
       if (closeBtn) { closeModal(closeBtn.getAttribute('data-close')); return; }
@@ -288,11 +243,7 @@
       var accBtn = e.target.closest('#accountButton');
       if (accBtn) {
         if (!state.user) showModal('authModal');
-        else {
-          localStorage.removeItem('fadilToken'); localStorage.removeItem('fadilUser');
-          state.token = null; state.user = null;
-          updateAccount(); window.location.reload();
-        }
+        else { localStorage.removeItem('fadilToken'); localStorage.removeItem('fadilUser'); state.token = null; state.user = null; updateAccount(); window.location.reload(); }
         return;
       }
       
@@ -309,12 +260,10 @@
              if (msgs && msgs.length > 0) {
                var html = '';
                for (var i=0; i<msgs.length; i++) { html += '<div class="bubble ' + (msgs[i].senderRole==='admin' ? 'admin' : 'student') + '">' + escapeHtml(msgs[i].body) + '<time>' + new Date(msgs[i].createdAt).toLocaleString('ar-IQ') + '</time></div>'; }
-               log.innerHTML = html;
-               log.scrollTop = log.scrollHeight;
+               log.innerHTML = html; log.scrollTop = log.scrollHeight;
              } else { log.innerHTML = '<div class="empty">كيف نساعدك؟</div>'; }
           }
-        } catch(err) {}
-        return;
+        } catch(err) {} return;
       }
       
       var authSwitch = e.target.closest('#authSwitch');
@@ -323,8 +272,7 @@
         document.getElementById('nameInput').style.display = state.register ? 'block' : 'none';
         document.getElementById('authTitle').textContent = state.register ? 'إنشاء حساب جديد' : 'تسجيل الدخول';
         document.getElementById('authSubmit').textContent = state.register ? 'إنشاء الحساب' : 'دخول';
-        authSwitch.textContent = state.register ? 'لديك حساب بالفعل؟ سجّل الدخول' : 'ليس لديك حساب؟ أنشئ حساباً';
-        return;
+        authSwitch.textContent = state.register ? 'لديك حساب بالفعل؟ سجّل الدخول' : 'ليس لديك حساب؟ أنشئ حساباً'; return;
       }
     });
 
@@ -361,9 +309,7 @@
       e.preventDefault();
       if (!state.token) return showModal('authModal');
       var form = new FormData();
-      form.append('plan', 'monthly');
-      form.append('note', document.getElementById('subscriptionNote').value);
-      form.append('paymentProof', document.getElementById('proofInput').files[0]);
+      form.append('plan', 'monthly'); form.append('note', document.getElementById('subscriptionNote').value); form.append('paymentProof', document.getElementById('proofInput').files[0]);
       try {
         await api('/api/subscriptions', { method:'POST', body:form });
         closeModal('subscriptionModal'); e.target.reset(); alert('تم إرسال الطلب للإدارة بنجاح.');
@@ -375,13 +321,12 @@
     function initializeChart() {
       var container = document.getElementById('tradingViewChart');
       if (!container) return;
-      var script = document.createElement('script');
-      script.type = 'text/javascript'; script.async = true;
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
       script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
       script.text = JSON.stringify({ autosize:true, symbol:'BITSTAMP:BTCUSD', interval:'60', timezone:'Etc/UTC', theme:'dark', style:'1', locale:'ar_AE', allow_symbol_change:true, calendar:false, support_host:'https://www.tradingview.com' });
       container.appendChild(script);
     }
 
-    updateAccount(); loadStatus(); loadNews(); loadAnalyses(); loadManagedCourses(); loadQuizFiles(); initializeChart();
+    updateAccount(); loadStatus(); loadNews(); loadAnalyses(); loadManagedCourses(); loadQuizFiles(); loadResultFiles(); initializeChart();
   </script>
 </body></html>
