@@ -1,396 +1,227 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#050505"><title>FADIL TRADING | منصة التداول</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>إدارة FADIL TRADING</title>
   <link rel="stylesheet" href="/style.css">
   <style>
     .chat-log { display: flex; flex-direction: column; gap: 10px; padding: 15px; }
     .bubble { padding: 10px 15px; max-width: 75%; position: relative; font-size: 0.95rem; }
     .bubble time { display: block; font-size: 0.75rem; opacity: 0.8; margin-top: 5px; }
-    .bubble.admin { background-color: #007bff !important; align-self: flex-start !important; color: white !important; border-radius: 15px 15px 15px 0 !important; border: none; }
-    .bubble.student { background-color: #28a745 !important; align-self: flex-end !important; color: white !important; border-radius: 15px 15px 0 15px !important; border: none; }
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 99999; align-items: center; justify-content: center; }
-    .modal.open { display: flex !important; }
+    .bubble.admin { background-color: #007bff !important; align-self: flex-end !important; color: white !important; border-radius: 15px 15px 0 15px !important; border: none; }
+    .bubble.student { background-color: #28a745 !important; align-self: flex-start !important; color: white !important; border-radius: 15px 15px 15px 0 !important; border: none; }
   </style>
 </head>
 <body>
-  <header class="site-header"><div class="container nav">
-    <a class="brand" href="#home"><span class="brand-mark">♛</span><span>FADIL TRADING<small>EDUCATION PLATFORM</small></span></a>
-    <nav class="nav-links"><a href="#home">الرئيسية</a><a href="#courses">الكورسات</a><a href="#analysis">تحليل السوق</a><a href="#tests">الاختبارات</a><a href="#student-results">النتائج</a></nav>
-    <button class="btn btn-outline" id="accountButton">تسجيل الدخول</button>
-  </div></header>
+  <section class="auth-page" id="adminLogin">
+    <div class="auth-box">
+      <div class="brand"><span class="brand-mark">♛</span><span>FADIL TRADING<small>ADMIN CONSOLE</small></span></div>
+      <h1>دخول الإدارة</h1>
+      <form id="loginForm" class="form-grid">
+        <input id="email" type="text" placeholder="البريد الإلكتروني أو admin" required>
+        <input id="password" type="password" placeholder="كلمة المرور" required>
+        <button class="btn">دخول لوحة التحكم</button>
+        <div class="notice" id="loginNotice"></div>
+      </form>
+    </div>
+  </section>
 
-  <main id="home">
-    <section class="container hero">
-      <div><div class="eyebrow">أكاديمية تداول مبنية للمتداول الواعي</div><h1>تعلّم التداول بوضوح، <span class="accent">وتداول بثقة.</span></h1>
-      <p class="lead">منهج عملي من الأساسيات إلى مفاهيم السيولة والـ SMC، مع ملازم منظمة ودعم مباشر يساعدك على بناء خطة تداول منضبطة.</p>
-      <div class="hero-actions"><a href="#courses" class="btn">استكشف المسارات</a><button class="btn btn-outline" id="joinButton">ابدأ عضويتك</button></div></div>
-      <div class="hero-visual"><div class="crown">♛</div><div class="signal"><span>إشارة الأسبوع</span><b>DISCIPLINE FIRST ↗</b></div></div>
-    </section>
+  <div class="admin-shell" id="dashboard" hidden>
+    <aside class="admin-side">
+      <a class="brand" href="/home.html"><span class="brand-mark">♛</span><span>FADIL TRADING<small>ADMIN CONSOLE</small></span></a>
+      <nav>
+        <a class="active" href="#tickets">صندوق الدعم</a>
+        <a href="#subscriptions">إدارة الاشتراكات</a>
+        <a href="#content">الكورسات والمقاطع</a>
+        <a href="#news">إدارة الأخبار</a>
+        <a href="#analyses">التحليلات</a>
+        <a href="#quizFiles">ملفات الاختبارات</a>
+        <a href="#resultFiles">نتائج الطلاب</a>
+        <a href="#performance">أداء ونتائج الطلاب</a>
+        <a href="#students">إدارة الطلاب</a>
+        <a href="/home.html">عرض المنصة</a>
+        <button class="btn btn-danger" id="logout">تسجيل الخروج</button>
+      </nav>
+    </aside>
 
-    <section class="container stats" aria-label="إحصائيات المنصة"><div class="stat"><strong>+24</strong><span>درس عملي</span></div><div class="stat"><strong>5</strong><span>مسارات تعليمية</span></div><div class="stat"><strong>1:1</strong><span>دعم مباشر للطلاب</span></div></section>
-
-    <section class="container section" id="courses">
-      <div class="section-head">
-        <div><h2>مساراتك التعليمية</h2><p>يتم فتح الدروس فور اعتماد اشتراكك من الإدارة.</p></div>
-        <span class="eyebrow" id="membershipLabel">الحالة: زائر</span>
+    <main class="admin-main">
+      <div class="row">
+        <div><span class="eyebrow">مركز القيادة</span><h1>أهلاً، <span id="adminName"></span></h1></div>
+        <button class="btn btn-outline" id="refresh">تحديث البيانات</button>
       </div>
-      <div class="notice" id="databaseNotice"></div>
       
-      <!-- الكورسات الثابتة الأساسية (المقفلة والمفتوحة حسب العضوية) -->
-      <div class="course-grid">
-        <article class="course-card premium-course" onclick="openStaticCourse('SMC / ICT')">
-          <div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1611974789855-9c2a0a7236a?auto=format&fit=crop&w=900&q=85')"></div>
-          <div class="course-content"><span class="course-tag">المسار المتقدم</span><h3>مفاهيم SMC / ICT</h3><p>السيولة، الـ Order Blocks، وبناء فكرة التداول.</p></div>
-          <div class="course-lock"><span>🔒</span><b>مفاهيم SMC / ICT</b><small>استكشف الكورس</small></div>
-          <div class="course-start">ابدأ الدراسة ←</div>
-        </article>
+      <div class="dashboard-grid">
+        <!-- الدعم والمحادثة -->
+        <section class="panel" id="tickets"><h2>صندوق الدعم الفني</h2><div id="ticketList" class="table-list"><div class="empty">جارٍ تحميل التذاكر...</div></div></section>
+        <section class="panel"><h2>المحادثة والرد المباشر</h2><div id="conversation" class="chat-log" style="min-height:245px"><div class="empty">اختر تذكرة لعرض المحادثة.</div></div><form id="replyForm" class="chat-form"><input id="replyText" placeholder="اكتب الرد للطالب..." disabled><button class="btn" disabled>إرسال</button></form></section>
+        
+        <!-- الاشتراكات -->
+        <section class="panel full" id="subscriptions"><h2>إدارة الاشتراكات</h2><div id="subscriptionList" class="table-list"><div class="empty">جارٍ تحميل الطلبات...</div></div></section>
+        
+        <!-- المحتوى التعليمي -->
+        <section class="panel full" id="content">
+          <h2>إدارة المحتوى التعليمي</h2>
+          <div class="content-forms">
+            <form id="courseForm" class="form-grid content-form"><b>إضافة كورس</b><input id="courseTitle" maxlength="160" placeholder="اسم الكورس" required><input id="courseCategory" maxlength="80" placeholder="التصنيف"><textarea id="courseDescription" rows="3" placeholder="وصف الكورس"></textarea><label>صورة الكورس<input id="courseThumbnail" type="file" accept="image/*"></label><label>ملف مرفق اختياري<input id="courseAttachment" type="file"></label><button class="btn">رفع الكورس</button></form>
+            
+            <!-- التعديل هنا: إضافة required لحقل select -->
+            <form id="lessonForm" class="form-grid content-form">
+              <b>إضافة مقطع أو درس</b>
+              <select id="lessonCourse" required>
+                <option value="">اختر الكورس</option>
+              </select>
+              <input id="lessonTitle" maxlength="160" placeholder="عنوان المقطع" required>
+              <textarea id="lessonDescription" rows="3" placeholder="وصف المقطع"></textarea>
+              <input id="lessonVideoUrl" type="url" placeholder="رابط فيديو خارجي (اختياري)">
+              <label>ملف فيديو<input id="lessonVideo" type="file" accept="video/*"></label>
+              <label>ملف مرفق<input id="lessonAttachment" type="file"></label>
+              <button class="btn">رفع المقطع</button>
+            </form>
+            
+            <!-- التعديل هنا: إضافة required لحقل select -->
+            <form id="resourceForm" class="form-grid content-form">
+              <b>إضافة ملف للطلاب</b>
+              <select id="resourceCourse" required>
+                <option value="">اختر الكورس</option>
+              </select>
+              <input id="resourceTitle" maxlength="160" placeholder="اسم الملف" required>
+              <input id="resourceFile" type="file" required>
+              <button class="btn">رفع الملف</button>
+            </form>
+          </div>
+          <div id="contentList" class="table-list"><div class="empty">جارٍ تحميل المحتوى...</div></div>
+        </section>
 
-        <article class="course-card premium-course" onclick="openStaticCourse('Harmonic')">
-          <div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=900&q=85')"></div>
-          <div class="course-content"><span class="course-tag">تحليل فني</span><h3>مفاهيم Harmonic</h3><p>قراءة النماذج السعرية وتحديد مناطق الانعكاس.</p></div>
-          <div class="course-lock"><span>🔒</span><b>مفاهيم Harmonic</b><small>استكشف الكورس</small></div>
-          <div class="course-start">ابدأ الدراسة ←</div>
-        </article>
+        <!-- الأخبار -->
+        <section class="panel" id="news"><h2>نشر خبر أو تحديث سوق</h2><form id="newsForm" class="form-grid"><input id="newsTitle" maxlength="160" placeholder="عنوان الخبر" required><input id="newsCategory" maxlength="50" placeholder="التصنيف" value="تحديث السوق"><textarea id="newsSummary" maxlength="900" rows="5" placeholder="ملخص الخبر" required></textarea><input id="newsSource" type="url" placeholder="رابط المصدر (اختياري)"><button class="btn">نشر الخبر</button></form></section>
+        <section class="panel"><h2>الأخبار المنشورة</h2><div id="adminNewsList" class="table-list"><div class="empty">جارٍ التحميل...</div></div></section>
 
-        <article class="course-card premium-course" onclick="openStaticCourse('الأساسيات')">
-          <div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1642543492481-44e81e3914a7?auto=format&fit=crop&w=900&q=85')"></div>
-          <div class="course-content"><span class="course-tag">البداية الصحيحة</span><h3>الأساسيات</h3><p>لغة السوق، الشموع، وأنواع الأوامر.</p></div>
-          <div class="course-lock"><span>🔒</span><b>الأساسيات</b><small>استكشف الكورس</small></div>
-          <div class="course-start">ابدأ الدراسة ←</div>
-        </article>
+        <!-- التحليلات -->
+        <section class="panel" id="analyses"><h2>نشر تحليل</h2><form id="analysisForm" class="form-grid"><input id="analysisTitle" maxlength="160" placeholder="عنوان التحليل" required><textarea id="analysisBody" rows="5" maxlength="5000" placeholder="تفاصيل التحليل"></textarea><label>مرفق اختياري<input id="analysisAttachment" type="file"></label><button class="btn">نشر التحليل</button></form><div id="analysisList" class="table-list"></div></section>
 
-        <article class="course-card premium-course" onclick="openStaticCourse('إدارة رأس المال')">
-          <div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1621761191319-c6fb62004040?auto=format&fit=crop&w=900&q=85')"></div>
-          <div class="course-content"><span class="course-tag">حماية الحساب</span><h3>إدارة رأس المال</h3><p>المخاطر، حجم العقد، وخطة الاستمرارية.</p></div>
-          <div class="course-lock"><span>🔒</span><b>إدارة رأس المال</b><small>استكشف الكورس</small></div>
-          <div class="course-start">ابدأ الدراسة ←</div>
-        </article>
+        <!-- ملفات الاختبارات -->
+        <section class="panel full" id="quizFiles">
+          <h2>إدارة ملفات الاختبارات</h2>
+          <form id="quizFileForm" class="form-grid content-form">
+            <input id="quizFileTitle" maxlength="160" placeholder="عنوان الملف (مثال: أسئلة الوحدة الأولى)" required>
+            <input id="quizFileDoc" type="file" required>
+            <button class="btn">رفع الملف</button>
+          </form>
+          <div id="quizFileList" class="table-list"><div class="empty">جارٍ تحميل الملفات...</div></div>
+        </section>
 
-        <article class="course-card premium-course highlight" id="books" onclick="openStaticCourse('الملازم والكتب')">
-          <div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1642052502780-8f8ad4fa1cc8?auto=format&fit=crop&w=900&q=85')"></div>
-          <div class="course-content"><span class="course-tag">مكتبة المتداول</span><h3>الملازم والكتب</h3><p>مراجع عملية قابلة للعودة إليها في كل مرحلة.</p></div>
-          <div class="course-lock"><span>🔒</span><b>الملازم والكتب</b><small>استكشف الكورس</small></div>
-          <div class="course-start">ابدأ الدراسة ←</div>
-        </article>
+        <!-- ملفات نتائج الطلاب -->
+        <section class="panel full" id="resultFiles">
+          <h2>رفع ملفات نتائج الطلاب</h2>
+          <form id="resultFileForm" class="form-grid content-form">
+            <input id="resultFileTitle" maxlength="160" placeholder="عنوان الملف (مثال: نتائج شهر أكتوبر)" required>
+            <input id="resultFileDoc" type="file" required>
+            <button class="btn">رفع ملف النتائج</button>
+          </form>
+          <div id="resultFileList" class="table-list"><div class="empty">جارٍ تحميل النتائج...</div></div>
+        </section>
+
+        <!-- أداء وإدارة الطلاب -->
+        <section class="panel full" id="performance"><h2>مراجعة أداء الطلاب</h2><div id="performanceList" class="table-list"><div class="empty">جارٍ تحميل الأداء...</div></div></section>
+        <section class="panel full" id="students"><h2>إدارة الطلاب</h2><div id="studentList" class="table-list"><div class="empty">جارٍ تحميل الطلاب...</div></div></section>
       </div>
-
-      <!-- الكورسات المضافة حديثاً من لوحة التحكم -->
-      <div class="managed-courses" id="managedCourses" style="margin-top: 30px;"></div>
-    </section>
-
-    <section class="container section" id="analysis">
-      <div class="section-head"><div><span class="eyebrow">MARKET INTELLIGENCE</span><h2>تحليل السوق والأخبار</h2><p>متابعة مركزة لأهم ما يحرك أسواق الكريبتو والفوركس، بجانب شارت حي للتخطيط الفني.</p></div><span class="market-live"><i></i> السوق مباشر</span></div>
-      <div class="market-grid">
-        <div class="panel chart-panel">
-          <div class="panel-title"><div><b>الشارت الفني المباشر</b><small>BTCUSD · TradingView</small></div><span class="status">LIVE</span></div>
-          <div class="tradingview-widget-container" id="tradingViewChart"><div class="tradingview-widget-container__widget"></div></div>
-        </div>
-        <div class="panel news-panel">
-          <div class="panel-title"><div><b>آخر أخبار السوق</b><small>تحديثات الإدارة والتحليلات المختصرة</small></div></div>
-          <div class="news-list" id="newsList"><div class="empty">جارٍ تحميل آخر الأخبار...</div></div>
-        </div>
-      </div>
-      <div class="published-analyses" id="publishedAnalyses"></div>
-    </section>
-
-    <section class="container section" id="tests">
-      <div class="section-head"><div><span class="eyebrow">KNOWLEDGE CHECK</span><h2>ملفات الاختبارات</h2><p>حمل ملفات الأسئلة والأجوبة لمراجعة مستواك (تُفتح لأصحاب العضوية النشطة).</p></div></div>
-      <div class="quiz-files-list panel" id="quizFilesList" style="padding: 20px;"><div class="empty">جارٍ تحميل الملفات...</div></div>
-    </section>
-
-    <section class="container section" id="student-results">
-      <div class="section-head"><div><span class="eyebrow">STUDENT PERFORMANCE</span><h2>نتائج الطلاب</h2><p>حمل ملفات النتائج لمعرفة أدائك في الاختبارات والمتابعة.</p></div></div>
-      <div class="quiz-files-list panel" id="resultFilesList" style="padding: 20px;"><div class="empty">جارٍ تحميل النتائج...</div></div>
-    </section>
-  </main>
-  
-  <footer class="footer">© <span id="year"></span> FADIL TRADING — التعليم أولاً، والانضباط دائمًا.</footer>
-
-  <button class="fab" id="supportButton" aria-label="فتح الدعم الفني">💬</button>
-  
-  <div class="modal" id="supportModal" aria-hidden="true"><section class="modal-card" role="dialog">
-    <div class="modal-head"><div><h3>الدعم الفني</h3><p>يرد فريق FADIL TRADING عليك هنا مباشرة.</p></div><button class="icon-btn" data-close="supportModal">×</button></div>
-    <div class="chat-log" id="chatLog"><div class="empty">سجّل دخولك لبدء محادثة آمنة مع الدعم.</div></div>
-    <form class="chat-form" id="chatForm"><input id="chatInput" maxlength="1500" placeholder="اكتب رسالتك..." autocomplete="off"><button class="btn" type="submit">إرسال</button></form>
-  </section></div>
-
-  <div class="modal" id="authModal" aria-hidden="true"><section class="modal-card" role="dialog">
-    <div class="modal-head"><div><h3 id="authTitle">تسجيل الدخول</h3><p>حسابك يحفظ تقدمك ويعرض حالة عضويتك.</p></div><button class="icon-btn" data-close="authModal">×</button></div>
-    <form class="form-grid" id="authForm" style="padding:20px"><input id="nameInput" placeholder="الاسم الكامل" maxlength="80" style="display:none"><input id="emailInput" type="email" placeholder="البريد الإلكتروني" required><input id="passwordInput" type="password" placeholder="كلمة المرور (8 أحرف على الأقل)" minlength="8" required><button class="btn" type="submit" id="authSubmit">دخول</button><button class="icon-btn" type="button" id="authSwitch">ليس لديك حساب؟ أنشئ حساباً</button></form>
-  </section></div>
-
-  <div class="modal" id="subscriptionModal" aria-hidden="true"><section class="modal-card" role="dialog">
-    <div class="modal-head"><div><h3>طلب تفعيل العضوية</h3><p>أرفق إثبات الدفع ليتم مراجعته من الإدارة.</p></div><button class="icon-btn" data-close="subscriptionModal">×</button></div>
-    <form class="form-grid" id="subscriptionForm" style="padding:20px">
-      <div class="subscription-payment">
-        <span>رسوم العضوية</span>
-        <div style="text-align: center; margin-bottom: 5px; font-weight: bold; color: #fff; font-size: 0.95rem;">التحويل عن طريق الماستر كارد</div>
-        <strong>100,000 <small>د.ع</small></strong>
-        <p>رقم التحويل المالي المعتمد</p>
-        <b dir="ltr">2354412252</b>
-      </div>
-      <input id="proofInput" type="file" accept="image/png,image/jpeg,image/webp,application/pdf" required>
-      <textarea id="subscriptionNote" maxlength="500" rows="3" placeholder="ملاحظة اختيارية للإدارة"></textarea>
-      <button class="btn" type="submit">إرسال طلب التفعيل</button>
-    </form>
-  </section></div>
+    </main>
+  </div>
 
   <script>
-    var safeUser = null;
-    try {
-      var stored = localStorage.getItem('fadilUser');
-      if (stored && stored !== 'undefined') safeUser = JSON.parse(stored);
-    } catch (e) { localStorage.removeItem('fadilUser'); }
-    var safeToken = localStorage.getItem('fadilToken');
-    if (safeToken === 'undefined' || safeToken === 'null') safeToken = null;
-
-    var state = { token: safeToken, user: safeUser, register: false };
+    const state = { token: localStorage.getItem('fadilToken'), user: JSON.parse(localStorage.getItem('fadilUser') || 'null'), selectedUserId: null };
+    const $ = s => document.querySelector(s); const esc = s => String(s).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
     
-    function escapeHtml(v) { return String(v).replace(/[&<>'"]/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]; }); }
-    function showModal(id) { var el = document.getElementById(id); if(el) { el.classList.add('open'); } }
-    function closeModal(id) { var el = document.getElementById(id); if(el) { el.classList.remove('open'); } }
-
-    async function api(url, options) {
-      options = options || {};
-      var headers = Object.assign({}, (options.body instanceof FormData ? {} : {'Content-Type':'application/json'}), options.headers || {});
-      if (state.token) headers.Authorization = 'Bearer ' + state.token;
-      options.headers = headers;
-      var response = await fetch(url, options);
-      var raw = response.status === 204 ? '' : await response.text();
-      var data = null;
-      try { data = raw ? JSON.parse(raw) : null; } catch (e) { data = { error: raw.trim() }; }
-      if (!response.ok) throw new Error((data && data.error) || 'تعذر الإتمام');
+    async function api(url, options={}) {
+      const headers = { ...(options.body instanceof FormData ? {} : {'Content-Type':'application/json'}), Authorization: `Bearer ${state.token}`, ...(options.headers||{}) };
+      const res = await fetch(url, { ...options, headers });
+      const data = res.status === 204 ? null : await res.json().catch(()=>({}));
+      if (!res.ok) throw new Error(data?.error || `Error ${res.status}`);
       return data;
     }
-
-    function updateAccount() {
-      var loggedIn = !!state.user;
-      var accBtn = document.getElementById('accountButton');
-      if (accBtn) accBtn.innerHTML = loggedIn ? 'خروج · ' + escapeHtml(state.user.name) : 'تسجيل الدخول';
-      var memLabel = document.getElementById('membershipLabel');
-      if (memLabel) memLabel.innerHTML = (state.user && state.user.isSubscribed) ? 'الحالة: عضوية نشطة ✓' : 'الحالة: زائر';
-      
-      var cards = document.querySelectorAll('.premium-course');
-      for (var i = 0; i < cards.length; i++) {
-        if (state.user && (state.user.isSubscribed || state.user.role === 'admin')) {
-          cards[i].classList.add('unlocked');
-        } else {
-          cards[i].classList.remove('unlocked');
-        }
-      }
+    
+    function failure(msg) { $('#loginNotice').textContent = msg; $('#loginNotice').classList.add('show'); }
+    function openDashboard() { $('#adminLogin').hidden = true; $('#dashboard').hidden = false; $('#adminName').textContent = state.user.name; loadAll(); }
+    
+    async function checkAdmin() {
+      if(!state.token) return;
+      try { const {user} = await api('/api/user-status'); if(user.role !== 'admin') throw new Error('ليس حساب إدارة.'); state.user = user; openDashboard(); } 
+      catch(e) { localStorage.removeItem('fadilToken'); state.token = null; failure(e.message); }
     }
 
-    async function loadStatus() {
-      if (!state.token) return updateAccount();
-      try { 
-        var data = await api('/api/user-status'); 
-        state.user = data.user; 
-        localStorage.setItem('fadilUser', JSON.stringify(data.user)); 
-        updateAccount(); 
-      } catch (error) { 
-        localStorage.removeItem('fadilToken'); localStorage.removeItem('fadilUser'); 
-        state.token = null; state.user = null; updateAccount(); 
-      }
+    async function loadTickets() {
+      try { const t = await api('/api/admin/tickets'); $('#ticketList').innerHTML = t.length ? t.map(x => `<div class="ticket"><b>${esc(x.user.name)}</b><p>${esc(x.lastMessage.body)}</p><button class="btn btn-outline" onclick="selectTicket('${x.user._id}')">فتح</button></div>`).join('') : '<div class="empty">لا تذاكر.</div>'; } catch(e) { $('#ticketList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
     }
-
-    // فتح الكورسات الثابتة أو الانتقال لصفحة الكورس إذا تم رفع كورس مطابق من الأدمن
-    window.openStaticCourse = async function(title) {
-      if (!state.token) { showModal('authModal'); return; }
-      if (!state.user.isSubscribed && state.user.role !== 'admin') {
-        showModal('subscriptionModal');
-        return;
-      }
-      try {
-        var courses = await api('/api/courses');
-        var found = courses.find(function(c) { return c.title.includes(title); });
-        if (found) {
-          window.location.href = '/course.html?id=' + found._id;
-        } else {
-          alert('هذا الكورس قيد الإعداد وسيتم إضافته قريباً من الإدارة.');
-        }
-      } catch (e) { alert(e.message); }
-    };
-
-    async function loadManagedCourses() {
-      var container = document.getElementById('managedCourses');
-      if (!container) return;
-      try {
-        var courses = await api('/api/courses');
-        if (!courses || courses.length === 0) return;
-        var html = '<h3 class="managed-title">الكورسات الإضافية</h3><div class="course-grid uploaded-course-grid">';
-        for (var i = 0; i < courses.length; i++) {
-           var c = courses[i];
-           html += '<article class="course-card uploaded-course ' + ((state.user && (state.user.isSubscribed || state.user.role === 'admin') || c.isFree) ? 'unlocked' : '') + '">' +
-                     '<div class="course-image" style="background-image:url(\'' + escapeHtml(c.thumbnailPath || '') + '\')"></div>' +
-                     '<div class="course-content">' +
-                       '<span class="course-tag">' + escapeHtml(c.category || 'عام') + '</span>' +
-                       '<h3>' + escapeHtml(c.title) + '</h3>' +
-                       '<p>' + escapeHtml(c.description || '') + '</p>' +
-                     '</div>' +
-                     '<button class="course-open" onclick="openManagedCourse(\'' + c._id + '\')">ابدأ الدراسة ←</button>' +
-                   '</article>';
-        }
-        html += '</div>';
-        container.innerHTML = html;
-      } catch (e) {}
+    async function selectTicket(id) {
+      state.selectedUserId = id; $('#replyText').disabled = false; $('#replyForm button').disabled = false;
+      try { const ms = await api(`/api/admin/tickets/${id}`); const log = $('#conversation'); log.innerHTML = ms.map(m => `<div class="bubble ${m.senderRole==='admin'?'admin':'student'}">${esc(m.body)}<time>${m.createdAt ? new Date(m.createdAt).toLocaleString('ar-IQ') : ''}</time></div>`).join('') || '<div class="empty">لا رسائل.</div>'; log.scrollTop = log.scrollHeight; } catch(e) { alert(e.message); }
     }
-
-    window.openManagedCourse = async function(courseId) {
-      if (!state.token) { showModal('authModal'); return; }
-      try {
-        await api('/api/courses/' + courseId + '/select', { method:'POST' });
-        window.location.href = '/course.html?id=' + courseId;
-      } catch (error) { alert(escapeHtml(error.message)); }
-    };
-
-    async function loadQuizFiles() {
-      var container = document.getElementById('quizFilesList');
-      if (!container) return;
-      if (!state.token) { container.innerHTML = '<div class="empty">سجّل دخولك لعرض ملفات الاختبارات.</div>'; return; }
-      try {
-        var files = await api('/api/quiz-files');
-        if (files && files.length > 0) {
-           var html = '<div class="resource-list">';
-           for (var i=0; i<files.length; i++) { html += '<a href="' + escapeHtml(files[i].filePath) + '" target="_blank" style="display:block; padding:15px; background:#111; border-radius:8px; margin-bottom:10px; font-weight:bold; color:var(--accent); text-decoration:none;">📄 ' + escapeHtml(files[i].title) + ' ↓</a>'; }
-           html += '</div>'; container.innerHTML = html;
-        } else { container.innerHTML = '<div class="empty">لم ترفع الإدارة ملفات اختبارات حالياً.</div>'; }
-      } catch (e) { container.innerHTML = '<div class="empty">' + escapeHtml(e.message) + '</div>'; }
+    
+    async function loadSubscriptions() {
+      try { const l = await api('/api/admin/subscriptions'); $('#subscriptionList').innerHTML = l.length ? l.map(s => `<div class="table-item"><div><b>${esc(s.userId?.name)}</b><small> · ${new Date(s.createdAt).toLocaleDateString('ar-IQ')}</small>${s.paymentProof?` · <a class="accent" target="_blank" href="${s.paymentProof}">إثبات الدفع</a>`:''}</div><div>${s.status==='approved'?'<span class="status">معتمد</span>':`<button class="btn" onclick="approveSub('${s._id}')">اعتماد الطلب</button>`}</div></div>`).join('') : '<div class="empty">لا توجد طلبات.</div>'; } catch(e) { $('#subscriptionList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
     }
+    async function approveSub(id) { try { await api(`/api/admin/subscriptions/${id}/approve`, {method:'PATCH'}); loadSubscriptions(); loadStudents(); } catch(e) { alert(e.message); } }
 
-    async function loadResultFiles() {
-      var container = document.getElementById('resultFilesList');
-      if (!container) return;
-      if (!state.token) { container.innerHTML = '<div class="empty">سجّل دخولك لعرض ملفات النتائج.</div>'; return; }
+    async function loadContent() {
       try {
-        var files = await api('/api/result-files');
-        if (files && files.length > 0) {
-           var html = '<div class="resource-list">';
-           for (var i=0; i<files.length; i++) { html += '<a href="' + escapeHtml(files[i].filePath) + '" target="_blank" style="display:block; padding:15px; background:#111; border-radius:8px; margin-bottom:10px; font-weight:bold; color:var(--accent); text-decoration:none;">📊 ' + escapeHtml(files[i].title) + ' ↓</a>'; }
-           html += '</div>'; container.innerHTML = html;
-        } else { container.innerHTML = '<div class="empty">لم يتم رفع نتائج حتى الآن.</div>'; }
-      } catch (e) { container.innerHTML = '<div class="empty">' + escapeHtml(e.message) + '</div>'; }
+        const d = await api('/api/admin/courses');
+        const courseOptions = '<option value="">اختر الكورس</option>' + d.courses.map(c => `<option value="${c._id}">${esc(c.title)}</option>`).join('');
+        $('#lessonCourse').innerHTML = courseOptions;
+        $('#resourceCourse').innerHTML = courseOptions;
+        const cRows = d.courses.map(c => `<div class="table-item"><div><b>${esc(c.title)}</b></div><button class="btn btn-danger" onclick="remCourse('${c._id}')">حذف الكورس</button></div>`);
+        const lRows = d.lessons.map(l => `<div class="table-item compact-item"><div><b>مقطع: ${esc(l.title)}</b></div><button class="btn btn-danger" onclick="remLesson('${l._id}')">حذف</button></div>`);
+        const rRows = d.resources.map(r => `<div class="table-item compact-item"><div><b>ملف: ${esc(r.title)}</b></div><button class="btn btn-danger" onclick="remResource('${r._id}')">حذف</button></div>`);
+        $('#contentList').innerHTML = [...cRows, ...lRows, ...rRows].join('') || '<div class="empty">لا يوجد محتوى.</div>';
+      } catch(e) { $('#contentList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
     }
-
-    async function loadNews() {
-      var list = document.getElementById('newsList');
-      if (!list) return;
-      try {
-        var news = await api('/api/news');
-        if (news && news.length > 0) {
-           var html = '';
-           for (var i=0; i<news.length; i++) { html += '<article class="news-item"><div class="news-meta"><span>' + escapeHtml(news[i].category) + '</span><time>' + new Date(news[i].createdAt).toLocaleDateString('ar-IQ') + '</time></div><h3>' + escapeHtml(news[i].title) + '</h3><p>' + escapeHtml(news[i].summary) + '</p>' + (news[i].sourceUrl ? '<a href="' + escapeHtml(news[i].sourceUrl) + '" target="_blank">قراءة المصدر ←</a>' : '') + '</article>'; }
-           list.innerHTML = html;
-        } else { list.innerHTML = '<div class="empty">لا توجد أخبار.</div>'; }
-      } catch (e) { list.innerHTML = '<div class="empty">' + escapeHtml(e.message) + '</div>'; }
-    }
+    async function remCourse(id) { if(confirm('حذف الكورس نهائياً؟')) try { await api(`/api/admin/courses/${id}`, {method:'DELETE'}); loadContent(); } catch(e) { alert(e.message); } }
+    async function remLesson(id) { if(confirm('حذف المقطع؟')) try { await api(`/api/admin/lessons/${id}`, {method:'DELETE'}); loadContent(); } catch(e) { alert(e.message); } }
+    async function remResource(id) { if(confirm('حذف الملف؟')) try { await api(`/api/admin/resources/${id}`, {method:'DELETE'}); loadContent(); } catch(e) { alert(e.message); } }
 
     async function loadAnalyses() {
-      var container = document.getElementById('publishedAnalyses');
-      if (!container) return;
-      try {
-        var analyses = await api('/api/analyses');
-        if (analyses && analyses.length > 0) {
-           var html = '<h3 class="managed-title">تحليلات الإدارة</h3>';
-           for(var i=0; i<analyses.length; i++) { html += '<article class="analysis-card"><div><span class="course-tag">تحليل منشور</span><h3>' + escapeHtml(analyses[i].title) + '</h3><p>' + escapeHtml(analyses[i].body || '') + '</p></div>' + (analyses[i].attachmentPath ? '<a class="btn btn-outline" href="' + escapeHtml(analyses[i].attachmentPath) + '" target="_blank">فتح المرفق</a>' : '') + '</article>'; }
-           container.innerHTML = html;
-        } else { container.innerHTML = ''; }
-      } catch (e) { container.innerHTML = ''; }
+      try { const a = await api('/api/admin/analyses'); $('#analysisList').innerHTML = a.length ? a.map(x => `<div class="table-item"><div><b>${esc(x.title)}</b></div><button class="btn btn-danger" onclick="remAnalysis('${x._id}')">حذف</button></div>`).join('') : '<div class="empty">لا توجد تحليلات.</div>'; } catch(e) { $('#analysisList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
     }
+    async function remAnalysis(id) { if(confirm('حذف؟')) try { await api(`/api/admin/analyses/${id}`, {method:'DELETE'}); loadAnalyses(); } catch(e) { alert(e.message); } }
 
-    document.addEventListener('click', async function(e) {
-      var closeBtn = e.target.closest('[data-close]');
-      if (closeBtn) { closeModal(closeBtn.getAttribute('data-close')); return; }
-      
-      var accBtn = e.target.closest('#accountButton');
-      if (accBtn) {
-        if (!state.user) showModal('authModal');
-        else { localStorage.removeItem('fadilToken'); localStorage.removeItem('fadilUser'); state.token = null; state.user = null; updateAccount(); window.location.reload(); }
-        return;
-      }
-      
-      var joinBtn = e.target.closest('#joinButton');
-      if (joinBtn) { state.user ? showModal('subscriptionModal') : showModal('authModal'); return; }
-      
-      var supportBtn = e.target.closest('#supportButton');
-      if (supportBtn) {
-        showModal('supportModal');
-        try {
-          var msgs = await api('/api/support/messages');
-          var log = document.getElementById('chatLog');
-          if (log) {
-             if (msgs && msgs.length > 0) {
-               var html = '';
-               for (var i=0; i<msgs.length; i++) { html += '<div class="bubble ' + (msgs[i].senderRole==='admin' ? 'admin' : 'student') + '">' + escapeHtml(msgs[i].body) + '<time>' + new Date(msgs[i].createdAt).toLocaleString('ar-IQ') + '</time></div>'; }
-               log.innerHTML = html; log.scrollTop = log.scrollHeight;
-             } else { log.innerHTML = '<div class="empty">كيف نساعدك؟</div>'; }
-          }
-        } catch(err) {} return;
-      }
-      
-      var authSwitch = e.target.closest('#authSwitch');
-      if (authSwitch) {
-        state.register = !state.register;
-        document.getElementById('nameInput').style.display = state.register ? 'block' : 'none';
-        document.getElementById('authTitle').textContent = state.register ? 'إنشاء حساب جديد' : 'تسجيل الدخول';
-        document.getElementById('authSubmit').textContent = state.register ? 'إنشاء الحساب' : 'دخول';
-        authSwitch.textContent = state.register ? 'لديك حساب بالفعل؟ سجّل الدخول' : 'ليس لديك حساب؟ أنشئ حساباً'; return;
-      }
-    });
+    async function loadQuizFiles() {
+      try { const f = await api('/api/admin/quiz-files'); $('#quizFileList').innerHTML = f.length ? f.map(x => `<div class="table-item compact-item"><div><b>${esc(x.title)}</b><small>${esc(x.originalName)}</small></div><button class="btn btn-danger" onclick="remQuizFile('${x._id}')">حذف</button></div>`).join('') : '<div class="empty">لا توجد ملفات اختبارات.</div>'; } catch(e) { $('#quizFileList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+    }
+    async function remQuizFile(id) { if(confirm('حذف؟')) try { await api(`/api/admin/quiz-files/${id}`, {method:'DELETE'}); loadQuizFiles(); } catch(e) { alert(e.message); } }
 
-    document.getElementById('authForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      try {
-        var payload = { email: document.getElementById('emailInput').value, password: document.getElementById('passwordInput').value };
-        if (state.register) payload.name = document.getElementById('nameInput').value;
-        var data = await api('/api/auth/' + (state.register ? 'register' : 'login'), { method:'POST', body:JSON.stringify(payload) });
-        localStorage.setItem('fadilToken', data.token); localStorage.setItem('fadilUser', JSON.stringify(data.user));
-        window.location.reload();
-      } catch(err) { alert(err.message); }
-    });
+    async function loadResultFiles() {
+      try { const f = await api('/api/admin/result-files'); $('#resultFileList').innerHTML = f.length ? f.map(x => `<div class="table-item compact-item"><div><b>${esc(x.title)}</b><small>${esc(x.originalName)}</small></div><button class="btn btn-danger" onclick="remResultFile('${x._id}')">حذف</button></div>`).join('') : '<div class="empty">لا توجد ملفات نتائج.</div>'; } catch(e) { $('#resultFileList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+    }
+    async function remResultFile(id) { if(confirm('حذف؟')) try { await api(`/api/admin/result-files/${id}`, {method:'DELETE'}); loadResultFiles(); } catch(e) { alert(e.message); } }
 
-    document.getElementById('chatForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      var input = document.getElementById('chatInput');
-      if (!state.token) return showModal('authModal');
-      if (!input.value.trim()) return;
-      try {
-        await api('/api/support/messages', { method:'POST', body:JSON.stringify({ body: input.value }) });
-        input.value = '';
-        var msgs = await api('/api/support/messages');
-        var log = document.getElementById('chatLog');
-        if (log) {
-           var html = '';
-           for (var i=0; i<msgs.length; i++) { html += '<div class="bubble ' + (msgs[i].senderRole==='admin' ? 'admin' : 'student') + '">' + escapeHtml(msgs[i].body) + '<time>' + new Date(msgs[i].createdAt).toLocaleString('ar-IQ') + '</time></div>'; }
-           log.innerHTML = html; log.scrollTop = log.scrollHeight;
-        }
-      } catch(err) { alert(err.message); }
-    });
+    async function loadAdminNews() {
+      try { const n = await api('/api/admin/news'); $('#adminNewsList').innerHTML = n.length ? n.map(x => `<div class="table-item"><div><b>${esc(x.title)}</b><p class="item-summary">${esc(x.summary)}</p></div><button class="btn btn-danger" onclick="remNews('${x._id}')">حذف</button></div>`).join('') : '<div class="empty">لا أخبار.</div>'; } catch(e) { $('#adminNewsList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+    }
+    async function remNews(id) { if(confirm('حذف؟')) try { await api(`/api/admin/news/${id}`, {method:'DELETE'}); loadAdminNews(); } catch(e) { alert(e.message); } }
 
-    document.getElementById('subscriptionForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      if (!state.token) return showModal('authModal');
-      var form = new FormData();
-      form.append('plan', 'monthly'); form.append('note', document.getElementById('subscriptionNote').value); form.append('paymentProof', document.getElementById('proofInput').files[0]);
-      try {
-        await api('/api/subscriptions', { method:'POST', body:form });
-        closeModal('subscriptionModal'); e.target.reset(); alert('تم إرسال الطلب للإدارة بنجاح.');
-      } catch(err) { alert(err.message); }
-    });
+    async function loadPerformance() {
+      try { const p = await api('/api/admin/student-performance'); $('#performanceList').innerHTML = p.length ? p.map(x => `<div class="table-item"><div><b>${esc(x.student.name)}</b><small>${esc(x.currentCourse)} · شاهد ${x.watchedLessons} · أكمل ${x.completedLessons}/${x.totalLessons}</small></div><span class="status ${x.student.isSubscribed?'':'pending'}">${x.student.isSubscribed?'عضوية نشطة':'غير مشترك'}</span></div>`).join('') : '<div class="empty">لا بيانات أداء.</div>'; } catch(e) { $('#performanceList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+    }
+    async function loadStudents() {
+      try { const s = await api('/api/admin/students'); $('#studentList').innerHTML = s.length ? s.map(x => `<div class="table-item"><div><b>${esc(x.name)}</b><small>${esc(x.email)}</small></div><button class="btn btn-danger" onclick="remStudent('${x._id}')">حذف</button></div>`).join('') : '<div class="empty">لا يوجد طلاب.</div>'; } catch(e) { $('#studentList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+    }
+    async function remStudent(id) { if(confirm('حذف الطالب نهائياً؟')) try { await api(`/api/admin/students/${id}`, {method:'DELETE'}); loadStudents(); } catch(e) { alert(e.message); } }
 
-    if(document.getElementById('year')) document.getElementById('year').textContent = new Date().getFullYear();
+    async function loadAll() { await Promise.all([loadTickets(), loadSubscriptions(), loadContent(), loadAnalyses(), loadQuizFiles(), loadResultFiles(), loadAdminNews(), loadPerformance(), loadStudents()]); }
+
+    $('#loginForm').onsubmit = async e => { e.preventDefault(); try { const d = await api('/api/auth/login', {method:'POST', body:JSON.stringify({email:$('#email').value, password:$('#password').value})}); if(d.user.role!=='admin') throw new Error('مرفوض.'); state.token = d.token; state.user = d.user; localStorage.setItem('fadilToken', d.token); openDashboard(); } catch(err) { failure(err.message); } };
+    $('#replyForm').onsubmit = async e => { e.preventDefault(); if(!state.selectedUserId) return; try { await api(`/api/admin/tickets/${state.selectedUserId}/reply`, {method:'POST', body:JSON.stringify({body:$('#replyText').value})}); $('#replyText').value = ''; selectTicket(state.selectedUserId); loadTickets(); } catch(err) { alert(err.message); } };
+    $('#newsForm').onsubmit = async e => { e.preventDefault(); try { await api('/api/admin/news', {method:'POST', body:JSON.stringify({title:$('#newsTitle').value, category:$('#newsCategory').value, summary:$('#newsSummary').value, sourceUrl:$('#newsSource').value})}); e.target.reset(); $('#newsCategory').value='تحديث السوق'; loadAdminNews(); } catch(err) { alert(err.message); } };
+    $('#analysisForm').onsubmit = async e => { e.preventDefault(); try { const f = new FormData(); f.append('title', $('#analysisTitle').value); f.append('body', $('#analysisBody').value); if($('#analysisAttachment').files[0]) f.append('attachment', $('#analysisAttachment').files[0]); await api('/api/admin/analyses', {method:'POST', body:f}); e.target.reset(); loadAnalyses(); } catch(err) { alert(err.message); } };
+    $('#quizFileForm').onsubmit = async e => { e.preventDefault(); try { const f = new FormData(); f.append('title', $('#quizFileTitle').value); f.append('file', $('#quizFileDoc').files[0]); await api('/api/admin/quiz-files', {method:'POST', body:f}); e.target.reset(); loadQuizFiles(); } catch(err) { alert(err.message); } };
+    $('#resultFileForm').onsubmit = async e => { e.preventDefault(); try { const f = new FormData(); f.append('title', $('#resultFileTitle').value); f.append('file', $('#resultFileDoc').files[0]); await api('/api/admin/result-files', {method:'POST', body:f}); e.target.reset(); loadResultFiles(); } catch(err) { alert(err.message); } };
+    $('#courseForm').onsubmit = async e => { e.preventDefault(); try { const f = new FormData(); f.append('title', $('#courseTitle').value); f.append('category', $('#courseCategory').value); f.append('description', $('#courseDescription').value); if($('#courseThumbnail').files[0]) f.append('thumbnail', $('#courseThumbnail').files[0]); if($('#courseAttachment').files[0]) f.append('attachment', $('#courseAttachment').files[0]); await api('/api/admin/courses', {method:'POST', body:f}); e.target.reset(); loadContent(); } catch(err) { alert(err.message); } };
+    $('#lessonForm').onsubmit = async e => { e.preventDefault(); try { const f = new FormData(); f.append('courseId', $('#lessonCourse').value); f.append('title', $('#lessonTitle').value); f.append('description', $('#lessonDescription').value); f.append('videoUrl', $('#lessonVideoUrl').value); if($('#lessonVideo').files[0]) f.append('video', $('#lessonVideo').files[0]); if($('#lessonAttachment').files[0]) f.append('attachment', $('#lessonAttachment').files[0]); await api('/api/admin/lessons', {method:'POST', body:f}); e.target.reset(); loadContent(); } catch(err) { alert(err.message); } };
+    $('#resourceForm').onsubmit = async e => { e.preventDefault(); try { const f = new FormData(); f.append('courseId', $('#resourceCourse').value); f.append('title', $('#resourceTitle').value); f.append('file', $('#resourceFile').files[0]); await api('/api/admin/resources', {method:'POST', body:f}); e.target.reset(); loadContent(); } catch(err) { alert(err.message); } };
     
-    function initializeChart() {
-      var container = document.getElementById('tradingViewChart');
-      if (!container) return;
-      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
-      script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
-      script.text = JSON.stringify({ autosize:true, symbol:'BITSTAMP:BTCUSD', interval:'60', timezone:'Etc/UTC', theme:'dark', style:'1', locale:'ar_AE', allow_symbol_change:true, calendar:false, support_host:'https://www.tradingview.com' });
-      container.appendChild(script);
-    }
-
-    updateAccount(); loadStatus(); loadNews(); loadAnalyses(); loadManagedCourses(); loadQuizFiles(); loadResultFiles(); initializeChart();
+    $('#refresh').onclick = loadAll;
+    $('#logout').onclick = () => { localStorage.removeItem('fadilToken'); localStorage.removeItem('fadilUser'); location.reload(); };
+    checkAdmin();
   </script>
 </body>
 </html>
