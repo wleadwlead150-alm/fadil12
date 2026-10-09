@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#050505"><title>قاعة الدراسة | FADIL TRADING</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .course-page { padding: 40px 20px; max-width: 1000px; margin: 0 auto; min-height: 80vh; }
+    .video-container { width: 100%; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 20px; aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; border: 1px solid #222; }
+    .video-container video { width: 100%; height: 100%; object-fit: contain; outline: none; }
+    .lessons-grid { display: grid; gap: 15px; margin-top: 30px; }
+    .lesson-card { background: #111; padding: 20px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; transition: 0.3s; }
+    .lesson-card:hover { border-color: var(--accent); }
+    .lesson-card.active { border-color: var(--accent); background: #1a1a1a; box-shadow: 0 0 15px rgba(0, 204, 136, 0.1); }
+    .lesson-info h4 { margin: 0 0 5px 0; color: #fff; font-size: 1.1rem; }
+    .lesson-info p { margin: 0; color: #aaa; font-size: 0.9rem; }
+    .lesson-actions { display: flex; gap: 10px; }
+    .resources-section { margin-top: 40px; background: #0a0a0a; padding: 20px; border-radius: 8px; border: 1px solid #222; }
+    .resources-section a { display: block; padding: 12px; background: #111; border-radius: 6px; margin-bottom: 8px; color: var(--accent); text-decoration: none; font-weight: bold; border: 1px solid #333; transition: 0.3s; }
+    .resources-section a:hover { border-color: var(--accent); background: #1a1a1a; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="/home.html"><span class="brand-mark">♛</span><span>FADIL TRADING<small>EDUCATION PLATFORM</small></span></a>
+      <button class="btn btn-outline" onclick="window.location.href='/home.html'">العودة للرئيسية</button>
+    </div>
+  </header>
+
+  <main class="course-page">
+    <div id="courseContent"><div class="empty">جارٍ تحميل المحاضرات...</div></div>
+  </main>
+
+  <footer class="footer">© <span id="year"></span> FADIL TRADING — التعليم أولاً، والانضباط دائمًا.</footer>
+
+  <script>
+    var state = { token: localStorage.getItem('fadilToken') };
+    if (!state.token || state.token === 'undefined' || state.token === 'null') {
+      alert('الرجاء تسجيل الدخول أولاً.');
+      window.location.href = '/home.html';
+    }
+
+    var urlParams = new URLSearchParams(window.location.search);
+    var courseId = urlParams.get('id');
+    var currentLessons = [];
+
+    function escapeHtml(v) { return String(v).replace(/[&<>'"]/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]; }); }
+
+    async function api(url, options) {
+      options = options || {};
+      var headers = Object.assign({}, {'Content-Type':'application/json'}, options.headers || {});
+      headers.Authorization = 'Bearer ' + state.token;
+      options.headers = headers;
+      var response = await fetch(url, options);
+      var raw = response.status === 204 ? '' : await response.text();
+      var data = null;
+      try { data = raw ? JSON.parse(raw) : null; } catch (e) { data = { error: raw.trim() }; }
+      if (!response.ok) throw new Error((data && data.error) || 'خطأ في التحميل');
+      return data;
+    }
+
+    function playVideo(lessonId, videoUrl) {
+      var playerContainer = document.getElementById('mainPlayer');
+      var cards = document.querySelectorAll('.lesson-card');
+      for (var i = 0; i < cards.length; i++) cards[i].classList.remove('active');
+      var activeCard = document.getElementById('lesson-' + lessonId);
+      if (activeCard) activeCard.classList.add('active');
+
+      if (videoUrl) {
+        playerContainer.innerHTML = '<video controls autoplay src="' + escapeHtml(videoUrl) + '"></video>';
+      } else {
+        playerContainer.innerHTML = '<div class="empty">هذا الدرس لا يحتوي على فيديو مباشر.</div>';
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    window.completeLesson = async function(e, lessonId) {
+      e.stopPropagation(); // منع تشغيل الفيديو عند ضغط الزر
+      try {
+        await api('/api/lessons/' + lessonId + '/progress', { method:'POST', body:JSON.stringify({ status:'completed' }) });
+        alert('تم تسجيل الدرس كمكتمل بنجاح! 👏');
+        e.target.textContent = 'مكتمل ✓';
+        e.target.style.backgroundColor = 'var(--accent)';
+        e.target.style.color = '#fff';
+      } catch (err) { alert(err.message); }
+    };
+
+    async function loadCourse() {
+      if (!courseId) { document.getElementById('courseContent').innerHTML = '<div class="empty">لم يتم العثور على الكورس.</div>'; return; }
+      try {
+        var data = await api('/api/courses/' + courseId + '/content');
+        currentLessons = data.lessons || [];
+        
+        var html = '<div class="section-head" style="margin-bottom:20px;"><div><span class="eyebrow">قاعة المحاضرات</span><h2>' + escapeHtml(data.course.title) + '</h2><p>' + escapeHtml(data.course.description || '') + '</p></div></div>';
+        
+        // مشغل الفيديو الرئيسي
+        html += '<div class="video-container" id="mainPlayer"><div class="empty">اختر درساً من القائمة بالأسفل لبدء المشاهدة.</div></div>';
+        
+        // قائمة الدروس
+        if (currentLessons.length > 0) {
+          html += '<h3>قائمة الدروس والمقاطع</h3><div class="lessons-grid">';
+          for (var i = 0; i < currentLessons.length; i++) {
+             var l = currentLessons[i];
+             var targetVideo = l.videoPath ? l.videoPath : (l.videoUrl ? l.videoUrl : '');
+             html += '<div class="lesson-card" id="lesson-' + l._id + '" onclick="playVideo(\'' + l._id + '\', \'' + targetVideo + '\')">' +
+                       '<div class="lesson-info">' +
+                         '<h4>▶ ' + escapeHtml(l.title) + '</h4>' +
+                         '<p>' + escapeHtml(l.description || '') + '</p>' +
+                       '</div>' +
+                       '<div class="lesson-actions">';
+             if (l.attachmentPath) {
+               html += '<a href="' + escapeHtml(l.attachmentPath) + '" target="_blank" class="btn btn-outline" style="padding: 8px 12px; font-size:0.85rem;" onclick="event.stopPropagation()">الملف المرفق</a>';
+             }
+             html += '<button class="btn btn-outline" style="padding: 8px 12px; font-size:0.85rem;" onclick="completeLesson(event, \'' + l._id + '\')">إكمال الدرس</button>' +
+                       '</div>' +
+                     '</div>';
+          }
+          html += '</div>';
+        } else {
+          html += '<div class="empty">لم يتم رفع دروس لهذا الكورس بعد.</div>';
+        }
+
+        // ملفات الكورس
+        if (data.resources && data.resources.length > 0) {
+          html += '<div class="resources-section"><h3>ملفات وملازم الكورس</h3>';
+          for (var j = 0; j < data.resources.length; j++) {
+             html += '<a href="' + escapeHtml(data.resources[j].filePath) + '" target="_blank">📄 ' + escapeHtml(data.resources[j].title) + ' ↓</a>';
+          }
+          html += '</div>';
+        }
+
+        document.getElementById('courseContent').innerHTML = html;
+        if(document.getElementById('year')) document.getElementById('year').textContent = new Date().getFullYear();
+
+      } catch (err) {
+        document.getElementById('courseContent').innerHTML = '<div class="empty">' + escapeHtml(err.message) + '</div>';
+      }
+    }
+
+    loadCourse();
+  </script>
+</body>
+</html>
