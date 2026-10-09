@@ -11,7 +11,6 @@ const multer = require('multer');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
-const MONGO_URI = process.env.MONGO_URI;
 const DEFAULT_ADMIN_EMAIL = 'admin@fadildemo.com';
 const DEFAULT_ADMIN_PASSWORD = '123456';
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL).trim().toLowerCase();
@@ -24,6 +23,9 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(uploadsDirectory));
 
+// ----------------------------------------------------
+// Mongoose Schemas (نماذج قاعدة البيانات)
+// ----------------------------------------------------
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, maxlength: 80 },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
@@ -42,6 +44,7 @@ const courseSchema = new mongoose.Schema({
   thumbnailPath: { type: String, default: '' },
   attachmentPath: { type: String, default: '' },
   isPublished: { type: Boolean, default: true },
+  isFree: { type: Boolean, default: false }, // الكورس المجاني
 }, { timestamps: true });
 
 const lessonSchema = new mongoose.Schema({
@@ -59,6 +62,15 @@ const lessonSchema = new mongoose.Schema({
 const resourceSchema = new mongoose.Schema({
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', default: null },
   lessonId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lesson', default: null },
+  title: { type: String, required: true, trim: true, maxlength: 160 },
+  filePath: { type: String, required: true },
+  originalName: { type: String, default: '' },
+  mimeType: { type: String, default: '' },
+  size: { type: Number, default: 0 },
+}, { timestamps: true });
+
+// Schema الخاص بنظام الاختبارات (رفع ملفات فقط)
+const quizFileSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true, maxlength: 160 },
   filePath: { type: String, required: true },
   originalName: { type: String, default: '' },
@@ -100,23 +112,6 @@ const newsSchema = new mongoose.Schema({
   isPublished: { type: Boolean, default: true },
 }, { timestamps: true });
 
-const quizResultSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  moduleId: { type: String, required: true, trim: true, maxlength: 80 },
-  moduleTitle: { type: String, required: true, trim: true, maxlength: 160 },
-  answers: [{ questionIndex: Number, selectedOption: Number, isCorrect: Boolean }],
-  score: { type: Number, required: true, min: 0 },
-  totalQuestions: { type: Number, required: true, min: 1 },
-}, { timestamps: true });
-
-const quizSchema = new mongoose.Schema({
-  moduleId: { type: String, required: true, trim: true, unique: true, maxlength: 80 },
-  title: { type: String, required: true, trim: true, maxlength: 160 },
-  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', default: null },
-  questions: [{ text: { type: String, required: true }, options: [{ type: String, required: true }], correctOption: { type: Number, required: true } }],
-  isPublished: { type: Boolean, default: true },
-}, { timestamps: true });
-
 const analysisSchema = new mongoose.Schema({
   title: { type: String, required: true, trim: true, maxlength: 160 },
   body: { type: String, default: '', maxlength: 5000 },
@@ -128,23 +123,21 @@ const User = mongoose.model('User', userSchema);
 const Course = mongoose.model('Course', courseSchema);
 const Lesson = mongoose.model('Lesson', lessonSchema);
 const Resource = mongoose.model('Resource', resourceSchema);
+const QuizFile = mongoose.model('QuizFile', quizFileSchema); // الموديل الجديد لملفات الاختبار
 const Progress = mongoose.model('Progress', progressSchema);
 const Subscription = mongoose.model('Subscription', subscriptionSchema);
 const Message = mongoose.model('Message', messageSchema);
 const News = mongoose.model('News', newsSchema);
-const QuizResult = mongoose.model('QuizResult', quizResultSchema);
-const Quiz = mongoose.model('Quiz', quizSchema);
 const Analysis = mongoose.model('Analysis', analysisSchema);
 
-const QUIZZES = {
-  basics: { title: 'اختبار أساسيات التداول', answers: [1, 0, 2] },
-  risk: { title: 'اختبار إدارة رأس المال', answers: [0, 2, 1] },
-};
-
+// ----------------------------------------------------
+// إعدادات الرفع (Multer)
+// ----------------------------------------------------
 const storage = multer.diskStorage({
   destination: (_req, _file, callback) => callback(null, uploadsDirectory),
   filename: (_req, file, callback) => callback(null, `${Date.now()}-${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase()}`),
 });
+
 const paymentUpload = multer({
   storage,
   limits: { fileSize: Number(process.env.UPLOAD_MAX_MB || 5) * 1024 * 1024 },
@@ -159,12 +152,19 @@ const contentUpload = multer({
   limits: { fileSize: Number(process.env.CONTENT_UPLOAD_MAX_MB || 250) * 1024 * 1024 },
   fileFilter: (_req, file, callback) => {
     const extension = path.extname(file.originalname).toLowerCase();
-    const allowedExtensions = new Set(['.mp4', '.webm', '.mov', '.m4v', '.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.zip', '.rar', '.jpg', '.jpeg', '.png', '.webp']);
-    if (!allowedExtensions.has(extension)) { const error = new Error('نوع الملف غير مدعوم. يسمح بالفيديوهات وملفات PDF/Office والصور والملفات المضغوطة.'); error.status = 400; return callback(error); }
+    const allowedExtensions = new Set(['.mp4', '.webm', '.mov', '.m4v', '.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.zip', '.rar', '.jpg', '.jpeg', '.png', '.webp', '.json']);
+    if (!allowedExtensions.has(extension)) { 
+      const error = new Error('نوع الملف غير مدعوم. يسمح بالفيديوهات وملفات PDF/Office والصور والملفات المضغوطة.'); 
+      error.status = 400; 
+      return callback(error); 
+    }
     callback(null, true);
   },
 });
 
+// ----------------------------------------------------
+// Functions مساعدة
+// ----------------------------------------------------
 function publicUser(user) {
   return { id: user._id, name: user.name, email: user.email, role: user.role, isSubscribed: user.isSubscribed, activatedAt: user.activatedAt, currentCourseId: user.currentCourseId };
 }
@@ -204,9 +204,26 @@ async function seedDefaultAdmin() {
   }
 }
 
+async function ensureFreeCourse() {
+  const freeCourse = await Course.findOne({ isFree: true });
+  if (!freeCourse) {
+    await Course.create({
+      title: 'كورس مجاني',
+      description: 'مدخل مجاني لتعلّم أساسيات التداول وإدارة المخاطر.',
+      category: 'general',
+      isPublished: true,
+      isFree: true
+    });
+    console.log('✓ Free course created');
+  }
+}
+
+// ----------------------------------------------------
+// Middlewares
+// ----------------------------------------------------
 function databaseRequired(_req, res, next) {
   if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({ error: 'قاعدة البيانات غير متصلة. أضف MONGO_URI صالحاً إلى ملف .env ثم أعد تشغيل الخادم.' });
+    return res.status(503).json({ error: 'قاعدة البيانات غير متصلة. يرجى الانتظار قليلاً.' });
   }
   next();
 }
@@ -227,8 +244,12 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+// ----------------------------------------------------
+// API Routes
+// ----------------------------------------------------
 app.get('/api/health', (_req, res) => res.json({ ok: true, database: mongoose.connection.readyState === 1 ? 'connected' : 'not-configured' }));
 
+// Auth
 app.post('/api/auth/register', databaseRequired, async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
@@ -237,10 +258,14 @@ app.post('/api/auth/register', databaseRequired, async (req, res, next) => {
     }
     const normalizedEmail = email.trim().toLowerCase();
     if (await User.exists({ email: normalizedEmail })) return res.status(409).json({ error: 'هذا البريد مسجّل مسبقاً.' });
+    
+    const freeCourse = await Course.findOne({ isFree: true });
+    
     const user = await User.create({
       name: name.trim(), email: normalizedEmail, passwordHash: await hashPassword(password),
       role: ADMIN_EMAIL && normalizedEmail === ADMIN_EMAIL ? 'admin' : 'student',
       authToken: crypto.randomBytes(32).toString('hex'),
+      currentCourseId: freeCourse ? freeCourse._id : null
     });
     res.status(201).json({ token: user.authToken, user: publicUser(user) });
   } catch (error) { next(error); }
@@ -264,6 +289,7 @@ app.post('/api/auth/logout', databaseRequired, requireAuth, async (req, res, nex
 
 app.get('/api/user-status', databaseRequired, requireAuth, (req, res) => res.json({ user: publicUser(req.user) }));
 
+// Public Data
 app.get('/api/news', databaseRequired, async (_req, res, next) => {
   try { res.json(await News.find({ isPublished: true }).sort({ createdAt: -1 }).limit(12)); } catch (error) { next(error); }
 });
@@ -272,62 +298,50 @@ app.get('/api/analyses', databaseRequired, async (_req, res, next) => {
   try { res.json(await Analysis.find({ isPublished: true }).sort({ createdAt: -1 }).limit(12)); } catch (error) { next(error); }
 });
 
-async function submitQuiz(req, res, next) {
+// Quiz Files for Students (عرض وتحميل الاختبارات كملفات)
+app.get('/api/quiz-files', databaseRequired, requireAuth, async (req, res, next) => {
   try {
-    const moduleId = req.params.moduleId || req.body.moduleId;
-    const storedQuiz = await Quiz.findOne({ moduleId });
-    const quiz = storedQuiz ? (storedQuiz.isPublished ? { title: storedQuiz.title, answers: storedQuiz.questions.map(question => question.correctOption) } : null) : QUIZZES[moduleId];
-    const submittedAnswers = req.body.answers;
-    if (!quiz) return res.status(404).json({ error: 'هذا الاختبار غير متاح.' });
-    if (!Array.isArray(submittedAnswers) || submittedAnswers.length !== quiz.answers.length || submittedAnswers.some(answer => !Number.isInteger(answer))) {
-      return res.status(400).json({ error: 'إجابات الاختبار غير مكتملة أو غير صالحة.' });
+    // متاح للأدمن أو للطلاب المشتركين
+    if (!req.user.isSubscribed && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'الاختبارات متاحة للعضوية النشطة فقط.' });
     }
-    const answers = quiz.answers.map((correctOption, questionIndex) => ({
-      questionIndex, selectedOption: submittedAnswers[questionIndex], isCorrect: submittedAnswers[questionIndex] === correctOption,
-    }));
-    const score = answers.filter(answer => answer.isCorrect).length;
-    const result = await QuizResult.create({ userId: req.user._id, moduleId, moduleTitle: quiz.title, answers, score, totalQuestions: quiz.answers.length });
-    res.status(201).json({ result: { id: result._id, moduleId: result.moduleId, moduleTitle: result.moduleTitle, score, totalQuestions: quiz.answers.length, createdAt: result.createdAt } });
-  } catch (error) { next(error); }
-}
-
-app.post('/api/quizzes/submit', databaseRequired, requireAuth, submitQuiz);
-app.post('/api/quizzes/:moduleId/submit', databaseRequired, requireAuth, submitQuiz);
-
-app.get('/api/quizzes/mine', databaseRequired, requireAuth, async (req, res, next) => {
-  try { res.json(await QuizResult.find({ userId: req.user._id }).select('moduleId moduleTitle score totalQuestions createdAt').sort({ createdAt: -1 })); } catch (error) { next(error); }
-});
-
-app.get('/api/quizzes', databaseRequired, async (_req, res, next) => {
-  try {
-    const stored = await Quiz.find().select('moduleId title questions isPublished').lean();
-    const storedById = new Map(stored.map(quiz => [quiz.moduleId, quiz]));
-    const defaults = Object.entries(QUIZZES).filter(([moduleId]) => !storedById.has(moduleId)).map(([moduleId, quiz]) => ({ moduleId, title: quiz.title, questionCount: quiz.answers.length }));
-    const custom = stored.filter(quiz => quiz.isPublished).map(quiz => ({ moduleId: quiz.moduleId, title: quiz.title, questionCount: quiz.questions.length }));
-    res.json([...defaults, ...custom]);
+    const quizFiles = await QuizFile.find().sort({ createdAt: -1 });
+    res.json(quizFiles);
   } catch (error) { next(error); }
 });
 
+// Courses & Lessons
 app.get('/api/courses', databaseRequired, requireAuth, async (req, res, next) => {
   try { res.json(await Course.find({ isPublished: true }).sort({ createdAt: -1 })); } catch (error) { next(error); }
 });
 
 app.get('/api/courses/:id/content', databaseRequired, requireAuth, async (req, res, next) => {
   try {
-    if (!req.user.isSubscribed && req.user.role !== 'admin') return res.status(403).json({ error: 'المحتوى متاح للعضوية النشطة فقط.' });
-    const [course, lessons, resources] = await Promise.all([
-      Course.findById(req.params.id), Lesson.find({ courseId: req.params.id, isPublished: true }).sort({ createdAt: 1 }), Resource.find({ courseId: req.params.id }).sort({ createdAt: -1 }),
-    ]);
+    const course = await Course.findById(req.params.id);
     if (!course || !course.isPublished) return res.status(404).json({ error: 'الكورس غير موجود.' });
+    
+    if (!req.user.isSubscribed && req.user.role !== 'admin' && !course.isFree) {
+      return res.status(403).json({ error: 'المحتوى متاح للعضوية النشطة فقط. أرسل طلب اشتراكك الآن.' });
+    }
+    
+    const [lessons, resources] = await Promise.all([
+      Lesson.find({ courseId: req.params.id, isPublished: true }).sort({ createdAt: 1 }), 
+      Resource.find({ courseId: req.params.id }).sort({ createdAt: -1 })
+    ]);
+    
     res.json({ course, lessons, resources });
   } catch (error) { next(error); }
 });
 
 app.post('/api/courses/:id/select', databaseRequired, requireAuth, async (req, res, next) => {
   try {
-    if (!req.user.isSubscribed && req.user.role !== 'admin') return res.status(403).json({ error: 'اختر الكورس بعد تفعيل عضويتك.' });
     const course = await Course.findOne({ _id: req.params.id, isPublished: true });
     if (!course) return res.status(404).json({ error: 'الكورس غير موجود.' });
+    
+    if (!req.user.isSubscribed && req.user.role !== 'admin' && !course.isFree) {
+       return res.status(403).json({ error: 'اختر الكورس بعد تفعيل عضويتك.' });
+    }
+    
     await User.findByIdAndUpdate(req.user._id, { currentCourseId: course._id });
     res.json({ course });
   } catch (error) { next(error); }
@@ -355,6 +369,7 @@ app.post('/api/lessons/:id/progress', databaseRequired, requireAuth, async (req,
   } catch (error) { next(error); }
 });
 
+// Subscriptions & Tickets
 app.post('/api/subscriptions', databaseRequired, requireAuth, paymentUpload.single('paymentProof'), async (req, res, next) => {
   try {
     const subscription = await Subscription.create({
@@ -385,6 +400,9 @@ app.get('/api/support/messages', databaseRequired, requireAuth, async (req, res,
   } catch (error) { next(error); }
 });
 
+// ----------------------------------------------------
+// Admin Routes
+// ----------------------------------------------------
 app.get('/api/admin/tickets', databaseRequired, requireAuth, requireAdmin, async (_req, res, next) => {
   try {
     const messages = await Message.find().sort({ createdAt: -1 }).populate('userId', 'name email');
@@ -413,6 +431,16 @@ app.get('/api/admin/subscriptions', databaseRequired, requireAuth, requireAdmin,
   try { res.json(await Subscription.find().populate('userId', 'name email').sort({ createdAt: -1 })); } catch (error) { next(error); }
 });
 
+app.patch('/api/admin/subscriptions/:id/approve', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const subscription = await Subscription.findById(req.params.id);
+    if (!subscription) return res.status(404).json({ error: 'طلب الاشتراك غير موجود.' });
+    subscription.status = 'approved'; subscription.reviewedAt = new Date(); await subscription.save();
+    await User.findByIdAndUpdate(subscription.userId, { isSubscribed: true, activatedAt: new Date() });
+    res.json({ subscription });
+  } catch (error) { next(error); }
+});
+
 app.get('/api/admin/news', databaseRequired, requireAuth, requireAdmin, async (_req, res, next) => {
   try { res.json(await News.find().sort({ createdAt: -1 })); } catch (error) { next(error); }
 });
@@ -435,10 +463,6 @@ app.delete('/api/admin/news/:id', databaseRequired, requireAuth, requireAdmin, a
   } catch (error) { next(error); }
 });
 
-app.get('/api/admin/quiz-results', databaseRequired, requireAuth, requireAdmin, async (_req, res, next) => {
-  try { res.json(await QuizResult.find().populate('userId', 'name email').sort({ createdAt: -1 }).limit(200)); } catch (error) { next(error); }
-});
-
 app.get('/api/admin/courses', databaseRequired, requireAuth, requireAdmin, async (_req, res, next) => {
   try {
     const [courses, lessons, resources] = await Promise.all([Course.find().sort({ createdAt: -1 }), Lesson.find().sort({ createdAt: -1 }), Resource.find().sort({ createdAt: -1 })]);
@@ -449,7 +473,8 @@ app.get('/api/admin/courses', databaseRequired, requireAuth, requireAdmin, async
 app.post('/api/admin/courses', databaseRequired, requireAuth, requireAdmin, contentUpload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'attachment', maxCount: 1 }]), async (req, res, next) => {
   try {
     if (!req.body.title?.trim()) return res.status(400).json({ error: 'أدخل اسم الكورس.' });
-    const course = await Course.create({ title: req.body.title.trim(), description: req.body.description?.trim() || '', category: req.body.category?.trim() || 'general', thumbnailPath: publicUploadPath(req.files?.thumbnail?.[0]), attachmentPath: publicUploadPath(req.files?.attachment?.[0]) });
+    const isFree = req.body.isFree === 'true' || req.body.isFree === true;
+    const course = await Course.create({ title: req.body.title.trim(), description: req.body.description?.trim() || '', category: req.body.category?.trim() || 'general', thumbnailPath: publicUploadPath(req.files?.thumbnail?.[0]), attachmentPath: publicUploadPath(req.files?.attachment?.[0]), isFree });
     res.status(201).json({ course });
   } catch (error) { await Promise.all([removeUploadedFile(publicUploadPath(req.files?.thumbnail?.[0])), removeUploadedFile(publicUploadPath(req.files?.attachment?.[0]))]); next(error); }
 });
@@ -503,22 +528,32 @@ app.delete('/api/admin/resources/:id', databaseRequired, requireAuth, requireAdm
   } catch (error) { next(error); }
 });
 
-app.get('/api/admin/quizzes', databaseRequired, requireAuth, requireAdmin, async (_req, res, next) => {
+// Admin Quiz Files Upload (رفع وحذف ملفات الاختبارات من لوحة التحكم)
+app.post('/api/admin/quiz-files', databaseRequired, requireAuth, requireAdmin, contentUpload.single('file'), async (req, res, next) => {
   try {
-    const stored = await Quiz.find().select('moduleId title isPublished questions createdAt').sort({ createdAt: -1 });
-    const ids = new Set(stored.map(item => item.moduleId));
-    const defaults = Object.entries(QUIZZES).filter(([moduleId]) => !ids.has(moduleId)).map(([moduleId, quiz]) => ({ moduleId, title: quiz.title, isPublished: true, questions: quiz.answers.map(() => ({})) }));
-    res.json([...stored, ...defaults]);
+    if (!req.file || !req.body.title?.trim()) return res.status(400).json({ error: 'اختر ملفاً وأدخل عنوان الاختبار.' });
+    const quizFile = await QuizFile.create({ 
+      title: req.body.title.trim(), 
+      filePath: publicUploadPath(req.file), 
+      originalName: req.file.originalname, 
+      mimeType: req.file.mimetype, 
+      size: req.file.size 
+    });
+    res.status(201).json({ quizFile });
+  } catch (error) { if (req.file) await removeUploadedFile(publicUploadPath(req.file)); next(error); }
+});
+
+app.get('/api/admin/quiz-files', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    res.json(await QuizFile.find().sort({ createdAt: -1 }));
   } catch (error) { next(error); }
 });
 
-app.delete('/api/admin/quizzes/:moduleId', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
+app.delete('/api/admin/quiz-files/:id', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
   try {
-    const moduleId = req.params.moduleId;
-    const existing = await Quiz.findOne({ moduleId });
-    if (!existing && !QUIZZES[moduleId]) return res.status(404).json({ error: 'الاختبار غير موجود.' });
-    if (existing) { existing.isPublished = false; await existing.save(); } else { await Quiz.create({ moduleId, title: QUIZZES[moduleId].title, questions: [], isPublished: false }); }
-    await QuizResult.deleteMany({ moduleId });
+    const quizFile = await QuizFile.findByIdAndDelete(req.params.id);
+    if (!quizFile) return res.status(404).json({ error: 'ملف الاختبار غير موجود.' });
+    await removeUploadedFile(quizFile.filePath);
     res.status(204).end();
   } catch (error) { next(error); }
 });
@@ -541,16 +576,6 @@ app.delete('/api/admin/analyses/:id', databaseRequired, requireAuth, requireAdmi
     if (!analysis) return res.status(404).json({ error: 'التحليل غير موجود.' });
     await removeUploadedFile(analysis.attachmentPath);
     res.status(204).end();
-  } catch (error) { next(error); }
-});
-
-app.patch('/api/admin/subscriptions/:id/approve', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
-  try {
-    const subscription = await Subscription.findById(req.params.id);
-    if (!subscription) return res.status(404).json({ error: 'طلب الاشتراك غير موجود.' });
-    subscription.status = 'approved'; subscription.reviewedAt = new Date(); await subscription.save();
-    await User.findByIdAndUpdate(subscription.userId, { isSubscribed: true, activatedAt: new Date() });
-    res.json({ subscription });
   } catch (error) { next(error); }
 });
 
@@ -577,7 +602,7 @@ app.get('/api/admin/student-performance', databaseRequired, requireAuth, require
 
 app.delete('/api/admin/students/:id', databaseRequired, requireAuth, requireAdmin, async (req, res, next) => {
   try {
-    await Promise.all([User.findByIdAndDelete(req.params.id), Subscription.deleteMany({ userId: req.params.id }), Message.deleteMany({ userId: req.params.id }), QuizResult.deleteMany({ userId: req.params.id }), Progress.deleteMany({ userId: req.params.id })]);
+    await Promise.all([User.findByIdAndDelete(req.params.id), Subscription.deleteMany({ userId: req.params.id }), Message.deleteMany({ userId: req.params.id }), Progress.deleteMany({ userId: req.params.id })]);
     res.status(204).end();
   } catch (error) { next(error); }
 });
@@ -591,18 +616,23 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: err.message || 'حدث خطأ غير متوقع.' });
 });
 
-// [التعديل هنا لجعل السيرفر ينتظر اتصال القاعدة أولاً وتفادي مشاكل التأخير في Render]
+// الاتصال المباشر والآمن بقاعدة البيانات (لا يسبب Crash)
 async function startServer() {
   try {
-    if (MONGO_URI) {
-      await mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 30000 });
-      console.log('✓ MongoDB connected');
-      await seedDefaultAdmin();
-    } else {
-      console.warn('⚠ MONGO_URI is not set. The interface will run, but database features require configuration.');
-    }
+    const safeMongoUri = "mongodb+srv://wleadwlead150_db_user:j3U18ZpQG8EYOWdo@fadil.wc6wbvu.mongodb.net/?appName=Fadil";
+    
+    mongoose.connect(safeMongoUri, { serverSelectionTimeoutMS: 30000 })
+      .then(async () => {
+        console.log('✓ MongoDB connected');
+        await seedDefaultAdmin();
+        await ensureFreeCourse();
+      })
+      .catch(err => {
+        console.error('⚠ MongoDB Connection Error (Continuing without crash):', err.message);
+      });
+
   } catch (error) {
-    console.warn(`⚠ MongoDB connection error: ${error.message}`);
+    console.warn(`⚠ System Error: ${error.message}`);
   }
 
   app.listen(PORT, () => console.log(`✓ FADIL TRADING is running at http://localhost:${PORT}`));
